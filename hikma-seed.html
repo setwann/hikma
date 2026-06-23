@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Hikma — بارکردنی داتا</title>
+<style>
+  body { font-family: sans-serif; background:#0f172a; color:#e2e8f0; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; }
+  .box { background:#1e293b; border-radius:16px; padding:2rem; width:100%; max-width:480px; box-shadow:0 8px 32px #0005; }
+  h2 { margin:0 0 1.5rem; color:#38bdf8; text-align:center; font-size:1.4rem; }
+  .status { border-radius:10px; padding:1rem; margin-top:1.2rem; font-size:.95rem; line-height:1.7; display:none; }
+  .ok  { background:#14532d; color:#86efac; display:block; }
+  .err { background:#450a0a; color:#fca5a5; display:block; }
+  .wait{ background:#1e3a5f; color:#93c5fd; display:block; }
+  button { width:100%; padding:.85rem; background:#0ea5e9; color:#fff; border:none; border-radius:10px; font-size:1.05rem; cursor:pointer; margin-top:.5rem; }
+  button:disabled { background:#334155; cursor:not-allowed; }
+  label { display:block; margin-bottom:.4rem; color:#94a3b8; font-size:.9rem; }
+  input, textarea { width:100%; box-sizing:border-box; padding:.65rem .8rem; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:.9rem; margin-bottom:1rem; }
+  textarea { height:160px; font-family:monospace; resize:vertical; }
+  .note { background:#0f172a; border-radius:8px; padding:.75rem; margin-bottom:1rem; font-size:.82rem; color:#64748b; border:1px solid #1e3a5f; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>📦 بارکردنی داتای سەرەتایی</h2>
+
+  <label>URLی Worker</label>
+  <input id="wurl" value="https://hikma.myrampro.workers.dev"/>
+
+  <label>داتای JSON (ئەدیت بکە بەپێی داتای ڕاستەقینەکەت)</label>
+  <textarea id="jdata">{
+  "teachers": [
+    { "fullName": "ناوی مامۆستا", "phone": "07700000000", "assignedClasses": [], "subjects": [], "email": "", "students": [] }
+  ],
+  "students": [
+    { "fullName": "ناوی قوتابی", "phone": "07700000000", "birthYear": "", "classGroup": "", "parentName": "", "grades": {}, "attendance": [], "culturalNotes": [], "behavioralNotes": [] }
+  ]
+}</textarea>
+
+  <div class="note">⚠️ تەنها ژمارەی تەلەفۆنی ڕاستەقینە بنووسە — ئەمە وشەی نهێنی بۆ چوونەژوورەوەیە</div>
+
+  <button id="btn" onclick="doSeed()">بارکردن بۆ KV</button>
+  <div id="status" class="status"></div>
+</div>
+
+<script>
+async function doSeed() {
+  const url = document.getElementById('wurl').value.trim().replace(/\/$/,'');
+  const btn = document.getElementById('btn');
+  const st  = document.getElementById('status');
+  let payload;
+
+  try {
+    payload = JSON.parse(document.getElementById('jdata').value);
+  } catch(e) {
+    st.className = 'status err';
+    st.textContent = '❌ JSON هەڵەیە: ' + e.message;
+    return;
+  }
+
+  btn.disabled = true;
+  st.className = 'status wait';
+  st.textContent = '⏳ داتا دەنێرێت بۆ KV...';
+
+  try {
+    const res  = await fetch(url + '/api/seed', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      st.className = 'status ok';
+      st.innerHTML = `✅ سەرکەوتوو!<br>
+        مامۆستا: ${(payload.teachers||[]).length} کەس تۆمارکرا<br>
+        قوتابی: ${(payload.students||[]).length} کەس تۆمارکرا`;
+    } else {
+      st.className = 'status err';
+      st.textContent = '❌ هەڵە: ' + (data.error || 'نەزانراو');
+    }
+  } catch(e) {
+    st.className = 'status err';
+    st.textContent = '❌ کێشەی پەیوەندی: ' + e.message;
+  }
+
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>
