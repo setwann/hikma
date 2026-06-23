@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>دەزگای ڕۆشنبیری نووری حیکمە — بازنەی سێتوان</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        fontFamily: { sans:['Noto Sans Arabic','sans-serif'], mono:['IBM Plex Mono','monospace'] },
+        colors: { ink:'#1A1A2E', deep:'#16213E', mid:'#0F3460', gold:'#C9A84C', goldlt:'#E8C97A',
+                  cream:'#F5F0E8', muted:'#8892A4', ok:'#2D7D46', danger:'#C0392B', warn:'#D4860A' }
+      }}
+    }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    body{font-family:'Noto Sans Arabic',sans-serif;background:#1A1A2E;color:#F5F0E8;min-height:100vh;direction:rtl}
+    .bg-geo{position:fixed;inset:0;pointer-events:none;z-index:0;
+      background:radial-gradient(circle at 12% 18%,rgba(201,168,76,.07) 0%,transparent 42%),
+                 radial-gradient(circle at 88% 82%,rgba(15,52,96,.9) 0%,transparent 50%)}
+    .gold-bar::before{content:'';display:block;height:3px;
+      background:linear-gradient(90deg,#C9A84C 0%,#E8C97A 55%,transparent 100%);
+      margin-bottom:1.5rem;border-radius:2px}
+    .card{background:rgba(22,33,62,.88);border:1px solid rgba(201,168,76,.18);border-radius:1rem;backdrop-filter:blur(8px)}
+    .card-inner{background:rgba(15,52,96,.3);border:1px solid rgba(201,168,76,.1);border-radius:.75rem}
+    .field{width:100%;background:rgba(26,26,46,.8);border:1px solid rgba(201,168,76,.25);border-radius:.5rem;
+      padding:.7rem 1rem;color:#F5F0E8;font-family:'Noto Sans Arabic',sans-serif;font-size:.9rem;
+      transition:border-color .2s,box-shadow .2s;outline:none;direction:rtl}
+    .field:focus{border-color:#C9A84C;box-shadow:0 0 0 3px rgba(201,168,76,.15)}
+    .field::placeholder{color:#8892A4}
+    select.field option{background:#16213E}
+    .btn-primary{background:linear-gradient(135deg,#C9A84C 0%,#E8C97A 100%);color:#1A1A2E;font-weight:700;
+      border:none;border-radius:.5rem;padding:.75rem 1.5rem;cursor:pointer;
+      transition:opacity .2s,transform .1s;font-family:'Noto Sans Arabic',sans-serif;font-size:.95rem}
+    .btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+    .btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    .btn-primary.full{width:100%}
+    .btn-ghost{background:transparent;border:1px solid rgba(201,168,76,.35);color:#C9A84C;
+      border-radius:.5rem;padding:.45rem .9rem;cursor:pointer;font-family:'Noto Sans Arabic',sans-serif;
+      font-size:.85rem;transition:background .2s;white-space:nowrap}
+    .btn-ghost:hover{background:rgba(201,168,76,.1)}
+    .btn-ok{background:rgba(45,125,70,.2);border:1px solid rgba(45,125,70,.5);color:#5DD87A;
+      border-radius:.5rem;padding:.4rem .85rem;cursor:pointer;font-family:'Noto Sans Arabic',sans-serif;
+      font-size:.82rem;transition:background .2s;white-space:nowrap}
+    .btn-ok:hover{background:rgba(45,125,70,.35)}
+    .btn-ok:disabled{opacity:.4;cursor:not-allowed}
+    .role-tab{flex:1;padding:.6rem 1rem;border-radius:.4rem;cursor:pointer;font-weight:500;
+      transition:background .2s,color .2s;text-align:center;font-family:'Noto Sans Arabic',sans-serif;
+      border:none;background:transparent;color:#8892A4}
+    .role-tab.active{background:linear-gradient(135deg,#C9A84C 0%,#E8C97A 100%);color:#1A1A2E;font-weight:700}
+    .nav-tab{padding:.55rem 1.1rem;border-radius:.4rem;cursor:pointer;font-size:.85rem;font-weight:500;
+      color:#8892A4;background:transparent;border:none;font-family:'Noto Sans Arabic',sans-serif;
+      transition:color .2s,background .2s;white-space:nowrap}
+    .nav-tab.active{color:#C9A84C;background:rgba(201,168,76,.1)}
+    .nav-tab:hover:not(.active){color:#F5F0E8}
+    .view{display:none}.view.active{display:block}
+    .badge{display:inline-flex;align-items:center;justify-content:center;
+      width:2.4rem;height:2.4rem;border-radius:50%;font-weight:700;font-size:.8rem}
+    .g-a{background:rgba(45,125,70,.25);color:#5DD87A;border:1px solid rgba(45,125,70,.5)}
+    .g-b{background:rgba(201,168,76,.2);color:#E8C97A;border:1px solid rgba(201,168,76,.4)}
+    .g-c{background:rgba(212,134,10,.2);color:#F0A830;border:1px solid rgba(212,134,10,.4)}
+    .g-d{background:rgba(192,57,43,.2);color:#E74C3C;border:1px solid rgba(192,57,43,.4)}
+    .att{display:inline-block;width:9px;height:9px;border-radius:50%}
+    .att-p{background:#2D7D46}.att-a{background:#C0392B}.att-l{background:#D4860A}
+    .note{border-radius:.5rem;padding:.75rem 1rem;font-size:.875rem;border-right:3px solid}
+    .note-positive{background:rgba(45,125,70,.1);border-color:#2D7D46}
+    .note-note{background:rgba(201,168,76,.08);border-color:#C9A84C}
+    .note-negative{background:rgba(192,57,43,.1);border-color:#C0392B}
+    .tbl{width:100%;border-collapse:collapse}
+    .tbl th{text-align:right;padding:.55rem .7rem;font-size:.78rem;font-weight:600;color:#C9A84C;
+      border-bottom:1px solid rgba(201,168,76,.2);white-space:nowrap}
+    .tbl td{padding:.6rem .7rem;font-size:.85rem;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+    .tbl tr:hover td{background:rgba(201,168,76,.04)}
+    .sh{display:flex;align-items:center;gap:.65rem;margin-bottom:.9rem}
+    .sh::after{content:'';flex:1;height:1px;background:rgba(201,168,76,.2)}
+    .sx{overflow-x:auto}
+    .pending-card{background:rgba(15,52,96,.45);border:1px solid rgba(201,168,76,.2);
+      border-radius:.75rem;padding:1rem 1.25rem}
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:rgba(26,26,46,.4)}
+    ::-webkit-scrollbar-thumb{background:rgba(201,168,76,.3);border-radius:3px}
+    #toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(3.5rem);
+      background:#16213E;border:1px solid rgba(201,168,76,.4);color:#F5F0E8;
+      padding:.65rem 1.4rem;border-radius:.5rem;font-size:.88rem;
+      transition:transform .28s,opacity .28s;opacity:0;pointer-events:none;z-index:9999;white-space:nowrap}
+    #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+    #toast.err{border-color:rgba(192,57,43,.6);color:#F1948A}
+    .spin{width:1.1rem;height:1.1rem;border:2px solid rgba(201,168,76,.3);border-top-color:#C9A84C;
+      border-radius:50%;animation:rot .65s linear infinite;display:inline-block;vertical-align:middle}
+    @keyframes rot{to{transform:rotate(360deg)}}
+    .tab-badge{display:inline-flex;align-items:center;justify-content:center;
+      background:#C9A84C;color:#1A1A2E;border-radius:999px;font-size:.65rem;font-weight:700;
+      min-width:1.1rem;height:1.1rem;padding:0 .3rem;margin-right:.25rem;vertical-align:middle}
+    .verify-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-top:.75rem}
+    .verify-input{flex:1;min-width:140px;background:rgba(26,26,46,.8);border:1px solid rgba(201,168,76,.25);
+      border-radius:.4rem;padding:.4rem .7rem;color:#F5F0E8;font-family:'Noto Sans Arabic',sans-serif;
+      font-size:.85rem;outline:none}
+    .verify-input:focus{border-color:#C9A84C}
+    .verify-input::placeholder{color:#8892A4}
+  </style>
+</head>
+<body>
+<div class="bg-geo"></div>
+<div id="toast"></div>
+
+<!-- ══ LOGIN ══ -->
+<div id="page-login" class="min-h-screen flex flex-col items-center justify-center px-4 py-12 relative z-10">
+  <div class="text-center mb-6 gold-bar w-full max-w-sm">
+    <p class="text-gold text-xs font-mono tracking-widest mb-2 uppercase">Nuri Hikma Educational Institute</p>
+    <h1 class="text-2xl font-bold text-cream leading-snug">دەزگای ڕۆشنبیری نووری حیکمە<br/><span class="text-gold">بازنەی سێتوان</span></h1>
+    <p class="text-muted text-sm mt-2">بەخێربێیت — تکایە زانیارییەکانت بنووسە</p>
+  </div>
+  <div class="card w-full max-w-sm p-7 space-y-5">
+    <div class="flex gap-1 bg-ink rounded-lg p-1">
+      <button class="role-tab active" data-role="student" onclick="setRole('student')">خوێندکار / بەرپرس</button>
+      <button class="role-tab" data-role="teacher" onclick="setRole('teacher')">مامۆستا</button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs text-muted mb-1.5">ناوی سێ‌پارچەیی</label>
+        <input id="ln" class="field" type="text" placeholder="ناوت بنووسە" autocomplete="off"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1.5">ژمارەی موبایل (وشەی نهێنی)</label>
+        <input id="lp" class="field" type="password" placeholder="07701234567" maxlength="11"/>
+      </div>
+    </div>
+    <p id="login-err" class="text-sm text-danger hidden text-center"></p>
+    <button class="btn-primary full" id="login-btn" onclick="doLogin()">چوونەژوورەوە</button>
+    <p class="text-center text-muted text-xs">ئەگەر کێشەت هەیە، پەیوەندی بکە بە ئیدارەکەوە</p>
+  </div>
+</div>
+
+<!-- ══ STUDENT ══ -->
+<div id="page-student" class="hidden relative z-10">
+  <nav class="sticky top-0 z-50 bg-deep border-b border-gold/10 px-4 py-3">
+    <div class="max-w-5xl mx-auto flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center">
+          <span class="text-gold text-sm font-bold" id="s-av">خ</span>
+        </div>
+        <div>
+          <p class="text-cream font-semibold text-sm leading-none" id="s-nav-name">—</p>
+          <p class="text-muted text-xs mt-0.5" id="s-nav-class">—</p>
+        </div>
+      </div>
+      <div class="flex gap-0.5 overflow-x-auto">
+        <button class="nav-tab active" onclick="sTab('s-overview')" data-tab="s-overview">گشتی</button>
+        <button class="nav-tab" onclick="sTab('s-grades')" data-tab="s-grades">نمرەکان</button>
+        <button class="nav-tab" onclick="sTab('s-att')" data-tab="s-att">حازربوون</button>
+        <button class="nav-tab" onclick="sTab('s-notes')" data-tab="s-notes">تێبینییەکان</button>
+      </div>
+      <button class="btn-ghost text-xs" onclick="doLogout()">دەرچوون</button>
+    </div>
+  </nav>
+  <main class="max-w-5xl mx-auto px-4 py-6 space-y-5">
+    <div id="s-overview" class="view active">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="card p-5">
+          <div class="sh"><span class="text-gold text-sm font-semibold">پرۆفایل</span></div>
+          <div class="space-y-2.5 text-sm" id="s-profile-rows"></div>
+        </div>
+        <div class="card p-5 sm:col-span-1 lg:col-span-2">
+          <div class="sh"><span class="text-gold text-sm font-semibold">کورتەی نمرەکان</span></div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="s-grade-cards"></div>
+        </div>
+        <div class="card-inner p-4 sm:col-span-2 lg:col-span-3">
+          <div class="sh"><span class="text-gold text-sm font-semibold">کورتەی حازربوون</span></div>
+          <div class="flex flex-wrap gap-5 text-sm" id="s-att-summary"></div>
+        </div>
+      </div>
+    </div>
+    <div id="s-grades" class="view">
+      <div class="card p-5">
+        <div class="sh"><span class="text-gold font-semibold">نمرەکانی بەتەواوی</span></div>
+        <div class="sx"><table class="tbl"><thead><tr>
+          <th>بابەت</th><th>پرسیاری یەکەم</th><th>پرسیاری دووەم</th><th>کۆتایی</th><th>ئاستی</th>
+        </tr></thead><tbody id="s-grade-rows"></tbody></table></div>
+      </div>
+    </div>
+    <div id="s-att" class="view">
+      <div class="card p-5">
+        <div class="sh"><span class="text-gold font-semibold">تۆماری حازربوون</span></div>
+        <div class="sx"><table class="tbl"><thead><tr>
+          <th>بەروار</th><th>دۆخ</th><th>هۆکار</th>
+        </tr></thead><tbody id="s-att-rows"></tbody></table></div>
+      </div>
+    </div>
+    <div id="s-notes" class="view">
+      <div class="card p-5">
+        <div class="sh"><span class="text-gold font-semibold">تێبینییە کولتووری و ڕەفتارییەکان</span></div>
+        <div id="s-note-list" class="space-y-3"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══ TEACHER ══ -->
+<div id="page-teacher" class="hidden relative z-10">
+  <nav class="sticky top-0 z-50 bg-deep border-b border-gold/10 px-4 py-3">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-mid/60 flex items-center justify-center">
+          <span class="text-gold text-sm font-bold" id="t-av">م</span>
+        </div>
+        <div>
+          <p class="text-cream font-semibold text-sm leading-none" id="t-nav-name">—</p>
+          <p class="text-muted text-xs mt-0.5">مامۆستا</p>
+        </div>
+      </div>
+      <div class="flex gap-0.5 overflow-x-auto">
+        <button class="nav-tab active" onclick="tTab('t-home')" data-tab="t-home">پرۆفایل</button>
+        <button class="nav-tab" onclick="tTab('t-add')" data-tab="t-add">زیادکردنی قوتابی</button>
+        <button class="nav-tab" onclick="tTab('t-pending')" data-tab="t-pending">
+          بازنەی سێتوان <span id="t-pending-badge" class="tab-badge hidden">0</span>
+        </button>
+        <button class="nav-tab" onclick="tTab('t-mystudents')" data-tab="t-mystudents">قوتابییەکانم</button>
+        <button class="nav-tab" onclick="tTab('t-list')" data-tab="t-list">هەموو قوتابییەکان</button>
+        <button class="nav-tab hidden" data-tab="t-detail" id="t-detail-tab">تەفسیل</button>
+      </div>
+      <button class="btn-ghost text-xs" onclick="doLogout()">دەرچوون</button>
+    </div>
+  </nav>
+  <main class="max-w-6xl mx-auto px-4 py-6 space-y-5">
+
+    <!-- پرۆفایل -->
+    <div id="t-home" class="view active">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="card p-5">
+          <div class="sh"><span class="text-gold text-sm font-semibold">زانیارییە کەسییەکان</span></div>
+          <div id="t-profile-rows" class="space-y-2.5 text-sm"></div>
+        </div>
+        <div class="card p-5">
+          <div class="sh"><span class="text-gold text-sm font-semibold">پۆل و بابەتەکان</span></div>
+          <div class="space-y-3">
+            <div><p class="text-muted text-xs mb-1.5">پۆلە دیاریکراوەکان</p><div id="t-class-chips" class="flex flex-wrap gap-1.5"></div></div>
+            <div><p class="text-muted text-xs mb-1.5">بابەتەکان</p><div id="t-subject-chips" class="flex flex-wrap gap-1.5"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- زیادکردنی قوتابی -->
+    <div id="t-add" class="view">
+      <div class="card p-6 max-w-md mx-auto">
+        <div class="sh"><span class="text-gold font-semibold">زیادکردنی قوتابی نوێ</span></div>
+        <p class="text-muted text-sm mb-5">ناو و ژمارەی مۆبایلی قوتابییەکە بنووسە. دوای تۆمارکردن دەکەوێتە بازنەی سێتوان.</p>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs text-muted mb-1.5">ناوی سێ‌پارچەیی قوتابی <span class="text-danger">*</span></label>
+            <input id="add-name" class="field" type="text" placeholder="کامەران علی حسەن" autocomplete="off"/>
+          </div>
+          <div>
+            <label class="block text-xs text-muted mb-1.5">ژمارەی مۆبایل <span class="text-danger">*</span></label>
+            <input id="add-phone" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
+          </div>
+        </div>
+        <p id="add-err" class="text-sm text-danger hidden mt-3"></p>
+        <button class="btn-primary full mt-5" id="add-btn" onclick="submitAddStudent()">تۆمارکردن و ناردن بۆ بازنەی سێتوان</button>
+      </div>
+    </div>
+
+    <!-- بازنەی سێتوان -->
+    <div id="t-pending" class="view">
+      <div class="card p-5">
+        <div class="sh"><span class="text-gold font-semibold">بازنەی سێتوان</span></div>
+        <p class="text-muted text-sm mb-4">قوتابییانەی کە مامۆستایان نییە. بۆ قبووڵکردن، ناوی تەواوی قوتابییەکە بنووسە.</p>
+        <div id="t-pending-list" class="space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- قوتابییەکانم -->
+    <div id="t-mystudents" class="view">
+      <div class="card p-5">
+        <div class="sh"><span class="text-gold font-semibold">قوتابییەکانم</span></div>
+        <div class="sx">
+          <table class="tbl">
+            <thead><tr><th>ناوی تەواو</th><th>تەلەفۆن</th><th></th></tr></thead>
+            <tbody id="t-mystudents-body"></tbody>
+          </table>
+        </div>
+        <p id="t-mystudents-empty" class="hidden text-center text-muted py-8 text-sm">هێشتا قوتابیت نییە.</p>
+      </div>
+    </div>
+
+    <!-- هەموو قوتابییەکان -->
+    <div id="t-list" class="view">
+      <div class="card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="sh mb-0 flex-1"><span class="text-gold font-semibold">هەموو قوتابییەکانی دەزگا</span></div>
+          <input id="t-search" class="field" style="width:180px;padding:.45rem .75rem;font-size:.82rem"
+            type="text" placeholder="گەڕان بە ناو..." oninput="renderAllStudents()"/>
+        </div>
+        <div class="sx">
+          <table class="tbl">
+            <thead><tr><th>ناوی تەواو</th><th>تەلەفۆن</th><th>مامۆستا</th><th>دۆخ</th><th></th></tr></thead>
+            <tbody id="t-list-body"></tbody>
+          </table>
+        </div>
+        <p id="t-list-empty" class="hidden text-center text-muted py-8 text-sm">هیچ قوتابیێک نەدۆزرایەوە.</p>
+      </div>
+    </div>
+
+    <!-- تەفسیل -->
+    <div id="t-detail" class="view">
+      <button class="btn-ghost mb-4" onclick="tTab('t-list')">← گەڕانەوە</button>
+      <div id="t-detail-content" class="space-y-4"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+
+
+// ══════════════════════════════════════════════
+//  GitHub API helpers
+// ══════════════════════════════════════════════
+const RAW = (path) =>
+  `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${path}?t=${Date.now()}`;
+
+async function ghGet(path) {
+  const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}?ref=${GH_BRANCH}`;
+  const r = await fetch(url, {
+    headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github.raw+json" }
+  });
+  if(!r.ok) throw new Error(`ghGet ${path}: ${r.status}`);
+  return r.json();
+}
+
+async function ghPut(path, content) {
+  // sha پێویستە بۆ نوێکردنەوە
+  const metaUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`;
+  const headers = {
+    "Authorization": `Bearer ${GH_TOKEN}`,
+    "Content-Type": "application/json"
+  };
+
+  const meta = await fetch(metaUrl, { headers });
+  if(!meta.ok) throw new Error(`ghPut meta ${path}: ${meta.status}`);
+  const { sha } = await meta.json();
+
+  const body = JSON.stringify({
+    message: `update ${path}`,
+    content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
+    sha,
+    branch: GH_BRANCH
+  });
+
+  const res = await fetch(metaUrl, { method: "PUT", headers, body });
+  if(!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.message || `ghPut ${path}: ${res.status}`);
+  }
+  return res.json();
+}
+
+// ══════════════════════════════════════════════
+//  DB — داتای ژیوە لە مێمۆری
+// ══════════════════════════════════════════════
+const DB = { students: [], teachers: [] };
+
+async function loadDB() {
+  const [teachers, students] = await Promise.all([
+    ghGet("teachers.json"),
+    ghGet("students.json")
+  ]);
+  DB.teachers = teachers;
+  DB.students = students;
+}
+
+// ھەڵوەشاندنەوەی ئاسان
+function findTeacher(name) { return DB.teachers.find(t => t.fullName === name); }
+function findStudent(name) { return DB.students.find(s => s.fullName === name); }
+
+// قوتابییەکانی بازنەی سێتوان = قوتابییانی students.json کە لە هیچ مامۆستایەکی teachers.json‌دا نین
+function getPendingStudents() {
+  const claimed = new Set(DB.teachers.flatMap(t => (t.students || []).map(s => s.fullName)));
+  return DB.students.filter(s => !claimed.has(s.fullName));
+}
+
+// قوتابییەکانی مامۆستایەک
+function getMyStudents(teacherName) {
+  const t = findTeacher(teacherName);
+  if(!t || !t.students) return [];
+  return t.students.map(ts => findStudent(ts.fullName) || ts);
+}
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let _role = null, _profile = null;
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+let _tt;
+function toast(msg, isErr=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.toggle('err', isErr);
+  el.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ══════════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════════
+function setRole(role) {
+  document.querySelectorAll('.role-tab').forEach(b => b.classList.toggle('active', b.dataset.role === role));
+}
+
+async function doLogin() {
+  const name  = document.getElementById('ln').value.trim();
+  const pass  = document.getElementById('lp').value.trim();
+  const role  = document.querySelector('.role-tab.active').dataset.role;
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('login-btn');
+
+  errEl.classList.add('hidden');
+  if(!name || !pass) {
+    errEl.textContent = 'تکایە هەموو خانەکان پڕ بکەرەوە.';
+    errEl.classList.remove('hidden'); return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin" style="margin-left:.4rem"></span> چاوەڕوان بە...';
+
+  try {
+    await loadDB();
+  } catch(e) {
+    errEl.textContent = 'کێشەی پەیوەندی — دووبارە هەوڵ بدەوە.';
+    errEl.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = 'چوونەژوورەوە'; return;
+  }
+
+  const norm = p => String(p || "").replace(/[\s\-]/g, "");
+  let record = null;
+
+  if(role === 'teacher') {
+    record = findTeacher(name);
+  } else {
+    record = findStudent(name);
+  }
+
+  if(!record || norm(record.phone) !== norm(pass)) {
+    errEl.textContent = 'ناو یان وشەی نهێنی هەڵەیە.';
+    errEl.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = 'چوونەژوورەوە'; return;
+  }
+
+  _role = role; _profile = record;
+  btn.disabled = false; btn.textContent = 'چوونەژوورەوە';
+
+  if(role === 'student') renderStudent(record);
+  else renderTeacher(record);
+}
+
+function doLogout() {
+  _role = _profile = null;
+  showPage('login');
+  document.getElementById('lp').value = '';
+  document.getElementById('login-err').classList.add('hidden');
+  toast('سەرکەوتووانە دەرچوویت.');
+}
+
+function showPage(p) {
+  ['login','student','teacher'].forEach(id =>
+    document.getElementById('page-' + id).classList.toggle('hidden', id !== p));
+}
+
+// ══════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════
+function gradeCls(s) {
+  if(s == null) return 'g-b';
+  if(s >= 90) return 'g-a'; if(s >= 75) return 'g-b';
+  if(s >= 60) return 'g-c'; return 'g-d';
+}
+function gradeLabel(s) { return s == null ? '—' : s; }
+function subjectAvg(g) {
+  const vs = [g.q1, g.q2, g.final].filter(v => v != null);
+  return vs.length ? Math.round(vs.reduce((a,b) => a+b, 0) / vs.length) : null;
+}
+function overallAvg(grades) {
+  if(!grades) return null;
+  const avgs = Object.values(grades).map(subjectAvg).filter(v => v != null);
+  return avgs.length ? Math.round(avgs.reduce((a,b) => a+b, 0) / avgs.length) : null;
+}
+function attCounts(logs = []) {
+  const c = {present:0, absent:0, late:0};
+  logs.forEach(l => { if(c[l.status] !== undefined) c[l.status]++; });
+  return c;
+}
+function attLabel(s) { return {present:'حازر', absent:'غایب', late:'دواکەوتوو'}[s] || s; }
+function attDotCls(s) { return {present:'att-p', absent:'att-a', late:'att-l'}[s] || ''; }
+function noteClass(cat) { return {positive:'note-positive', note:'note-note', negative:'note-negative'}[cat] || 'note-note'; }
+function esc(str) { return String(str || '').replace(/'/g, "\\'"); }
+
+// ══════════════════════════════════════════════
+//  STUDENT RENDER
+// ══════════════════════════════════════════════
+function renderStudent(p) {
+  showPage('student');
+  document.getElementById('s-av').textContent = (p.fullName || 'خ')[0];
+  document.getElementById('s-nav-name').textContent = p.fullName || '—';
+  document.getElementById('s-nav-class').textContent = p.classGroup || '—';
+
+  document.getElementById('s-profile-rows').innerHTML = [
+    ['ناوی تەواو', p.fullName || '—'],
+    ['تەلەفۆن', `<span dir="ltr" class="font-mono">${p.phone||'—'}</span>`],
+  ].map(([k,v]) => `<div class="flex justify-between gap-2"><span class="text-muted shrink-0">${k}</span><span class="text-cream text-right">${v}</span></div>`).join('');
+
+  const gc = document.getElementById('s-grade-cards'); gc.innerHTML = '';
+  if(p.grades) for(const [subj,g] of Object.entries(p.grades)) {
+    const avg = subjectAvg(g);
+    gc.innerHTML += `<div class="card-inner p-3 text-center"><p class="text-muted text-xs mb-2">${subj}</p><div class="badge ${gradeCls(avg)} mx-auto">${avg??'—'}</div></div>`;
+  }
+
+  const ac = attCounts(p.attendance);
+  document.getElementById('s-att-summary').innerHTML = [
+    ['att-p','حازر',ac.present],['att-a','غایب',ac.absent],['att-l','دواکەوتوو',ac.late]
+  ].map(([cls,lbl,n]) => `<span class="flex items-center gap-1.5"><span class="att ${cls}"></span><span class="text-muted">${lbl}:</span><span class="text-cream font-semibold">${n}</span></span>`).join('');
+
+  const gb = document.getElementById('s-grade-rows');
+  gb.innerHTML = p.grades && Object.keys(p.grades).length
+    ? Object.entries(p.grades).map(([subj,g]) => {
+        const a = subjectAvg(g);
+        return `<tr><td class="text-cream font-medium">${subj}</td><td>${gradeLabel(g.q1)}</td><td>${gradeLabel(g.q2)}</td><td>${gradeLabel(g.final)}</td><td><span class="badge ${gradeCls(a)}">${gradeLabel(a)}</span></td></tr>`;
+      }).join('')
+    : '<tr><td colspan="5" class="text-center text-muted py-4">نمرەی نییە</td></tr>';
+
+  const ab = document.getElementById('s-att-rows');
+  ab.innerHTML = p.attendance && p.attendance.length
+    ? [...p.attendance].reverse().map(a =>
+        `<tr><td class="font-mono text-xs" dir="ltr">${a.date}</td><td><span class="flex items-center gap-1.5"><span class="att ${attDotCls(a.status)}"></span>${attLabel(a.status)}</span></td><td class="text-muted text-xs">${a.reason||'—'}</td></tr>`
+      ).join('')
+    : '<tr><td colspan="3" class="text-center text-muted py-4">تۆماری نییە</td></tr>';
+
+  const all = [...(p.culturalNotes||[]), ...(p.behavioralNotes||[])].sort((a,b) => b.date.localeCompare(a.date));
+  document.getElementById('s-note-list').innerHTML = all.length
+    ? all.map(n => `<div class="note ${noteClass(n.category)}"><div class="flex items-center justify-between gap-2 mb-1"><span class="text-xs text-muted font-mono" dir="ltr">${n.date}</span><span class="text-xs text-muted">${n.author||''}</span></div><p>${n.note}</p></div>`).join('')
+    : '<p class="text-muted text-sm text-center py-4">تێبینیی نییە.</p>';
+
+  sTab('s-overview');
+}
+
+function sTab(id) {
+  document.querySelectorAll('#page-student .nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  document.querySelectorAll('#page-student .view').forEach(v => v.classList.toggle('active', v.id === id));
+}
+
+// ══════════════════════════════════════════════
+//  TEACHER RENDER
+// ══════════════════════════════════════════════
+function renderTeacher(p) {
+  showPage('teacher');
+  document.getElementById('t-av').textContent = (p.fullName || 'م')[0];
+  document.getElementById('t-nav-name').textContent = p.fullName || '—';
+
+  document.getElementById('t-profile-rows').innerHTML = [
+    ['ناوی تەواو', p.fullName || '—'],
+    ['تەلەفۆن', `<span dir="ltr" class="font-mono">${p.phone||'—'}</span>`],
+    ['ئیمەیڵ', `<span dir="ltr" class="font-mono text-xs">${p.email||'—'}</span>`],
+  ].map(([k,v]) => `<div class="flex justify-between gap-2"><span class="text-muted shrink-0">${k}</span><span class="text-cream text-right">${v}</span></div>`).join('');
+
+  document.getElementById('t-class-chips').innerHTML =
+    (p.assignedClasses||[]).map(c => `<span class="text-xs bg-mid/50 text-cream px-2 py-0.5 rounded">${c}</span>`).join('') || '<span class="text-muted text-sm">—</span>';
+  document.getElementById('t-subject-chips').innerHTML =
+    (p.subjects||[]).map(s => `<span class="text-xs bg-gold/10 text-goldlt px-2 py-0.5 rounded">${s}</span>`).join('') || '<span class="text-muted text-sm">—</span>';
+
+  renderPendingList();
+  renderMyStudents();
+  renderAllStudents();
+  tTab('t-home');
+}
+
+// ══════════════════════════════════════════════
+//  زیادکردنی قوتابی → students.json
+// ══════════════════════════════════════════════
+async function submitAddStudent() {
+  const name  = document.getElementById('add-name').value.trim();
+  const phone = document.getElementById('add-phone').value.trim();
+  const errEl = document.getElementById('add-err');
+  const btn   = document.getElementById('add-btn');
+  errEl.classList.add('hidden');
+
+  if(!name) { errEl.textContent = 'ناوی قوتابی پێویستە.'; errEl.classList.remove('hidden'); return; }
+  if(!phone) { errEl.textContent = 'ژمارەی مۆبایل پێویستە.'; errEl.classList.remove('hidden'); return; }
+  if(!/^07\d{9}$/.test(phone)) { errEl.textContent = 'ژمارەی مۆبایل دروست نییە. نموونە: 07701234567'; errEl.classList.remove('hidden'); return; }
+
+  if(findStudent(name)) {
+    errEl.textContent = 'ئەم ناوە پێشتر تۆمارکراوە.'; errEl.classList.remove('hidden'); return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin" style="margin-left:.4rem"></span> تۆمارکردن...';
+
+  try {
+    const newStudent = {
+      fullName: name,
+      phone: phone,
+      birthYear: "",
+      classGroup: "",
+      parentName: "",
+      grades: {},
+      attendance: [],
+      culturalNotes: [],
+      behavioralNotes: []
+    };
+
+    const updated = [...DB.students, newStudent];
+    await ghPut("students.json", updated);
+    DB.students = updated;
+
+    document.getElementById('add-name').value = '';
+    document.getElementById('add-phone').value = '';
+
+    renderPendingList();
+    renderAllStudents();
+    toast(`${name} تۆمارکرا ✓`);
+    tTab('t-pending');
+  } catch(e) {
+    errEl.textContent = 'هەڵە لە تۆمارکردن: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'تۆمارکردن و ناردن بۆ بازنەی سێتوان';
+}
+
+// ══════════════════════════════════════════════
+//  بازنەی سێتوان
+// ══════════════════════════════════════════════
+function renderPendingList() {
+  const pending = getPendingStudents();
+  const badge   = document.getElementById('t-pending-badge');
+  const listEl  = document.getElementById('t-pending-list');
+
+  badge.textContent = pending.length;
+  badge.classList.toggle('hidden', pending.length === 0);
+
+  if(!pending.length) {
+    listEl.innerHTML = '<p class="text-center text-muted py-8 text-sm">کەسی چاوەڕوان نییە.</p>';
+    return;
+  }
+
+  listEl.innerHTML = pending.map(p => `
+    <div class="pending-card">
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p class="font-semibold text-cream">${p.fullName}</p>
+          <p class="text-xs font-mono text-muted" dir="ltr">${p.phone}</p>
+        </div>
+      </div>
+      <div class="verify-row">
+        <input class="verify-input" id="vrf-${esc(p.fullName)}" type="text"
+          placeholder="ناوی تەواو بنووسە بۆ دڵنیابوون..." autocomplete="off"/>
+        <button class="btn-ok" id="vrf-btn-${esc(p.fullName)}"
+          onclick="acceptStudent('${esc(p.fullName)}')">✓ قبووڵکردن</button>
+      </div>
+      <p id="vrf-err-${esc(p.fullName)}" class="text-xs text-danger hidden mt-1"></p>
+    </div>
+  `).join('');
+}
+
+async function acceptStudent(studentName) {
+  const inputEl = document.getElementById('vrf-' + studentName);
+  const errEl   = document.getElementById('vrf-err-' + studentName);
+  const btn     = document.getElementById('vrf-btn-' + studentName);
+  const typed   = inputEl ? inputEl.value.trim() : '';
+  errEl.classList.add('hidden');
+
+  if(typed !== studentName) {
+    errEl.textContent = 'ناوەکە هەڵەیە. تکایە ناوی تەواوی قوتابی بنووسە.';
+    errEl.classList.remove('hidden'); return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>';
+
+  try {
+    // teachers.json نوێ بکەرەوە
+    const updatedTeachers = DB.teachers.map(t => {
+      if(t.fullName !== _profile.fullName) return t;
+      const students = t.students || [];
+      if(students.some(s => s.fullName === studentName)) return t;
+      return { ...t, students: [...students, { fullName: studentName, acceptedAt: new Date().toISOString() }] };
+    });
+
+    await ghPut("teachers.json", updatedTeachers);
+    DB.teachers = updatedTeachers;
+    _profile = findTeacher(_profile.fullName);
+
+    renderPendingList();
+    renderMyStudents();
+    renderAllStudents();
+    toast(`${studentName} قبووڵکرا ✓`);
+  } catch(e) {
+    errEl.textContent = 'هەڵە: ' + e.message;
+    errEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = '✓ قبووڵکردن';
+  }
+}
+
+// ══════════════════════════════════════════════
+//  قوتابییەکانم
+// ══════════════════════════════════════════════
+function renderMyStudents() {
+  const list  = getMyStudents(_profile.fullName);
+  const tbody = document.getElementById('t-mystudents-body');
+  const empty = document.getElementById('t-mystudents-empty');
+
+  empty.classList.toggle('hidden', list.length > 0);
+  tbody.innerHTML = list.map(s => `
+    <tr>
+      <td class="text-cream font-medium">${s.fullName}</td>
+      <td dir="ltr" class="font-mono text-xs">${s.phone||'—'}</td>
+      <td><button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-mystudents')">بینین</button></td>
+    </tr>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+//  هەموو قوتابییەکان
+// ══════════════════════════════════════════════
+function renderAllStudents() {
+  const search  = (document.getElementById('t-search')?.value || '').trim().toLowerCase();
+  const tbody   = document.getElementById('t-list-body');
+  const empty   = document.getElementById('t-list-empty');
+
+  // map: studentName → teacherName
+  const ownerMap = {};
+  DB.teachers.forEach(t => (t.students||[]).forEach(s => { ownerMap[s.fullName] = t.fullName; }));
+
+  const myName = _profile.fullName;
+
+  const list = DB.students
+    .filter(s => !search || s.fullName.toLowerCase().includes(search))
+    .sort((a,b) => a.fullName.localeCompare(b.fullName));
+
+  empty.classList.toggle('hidden', list.length > 0);
+  tbody.innerHTML = list.map(s => {
+    const owner  = ownerMap[s.fullName];
+    const isMine = owner === myName;
+    const ownerLabel = owner
+      ? (isMine ? '<span class="text-xs bg-ok/20 text-ok border border-ok/30 px-2 py-0.5 rounded">قوتابیم</span>'
+                : `<span class="text-xs text-muted">${owner}</span>`)
+      : '<span class="text-xs text-warn">بازنەی سێتوان</span>';
+    return `<tr>
+      <td class="text-cream font-medium">${s.fullName}</td>
+      <td dir="ltr" class="font-mono text-xs">${s.phone||'—'}</td>
+      <td>${ownerLabel}</td>
+      <td>${owner ? '' : '—'}</td>
+      <td><button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  تەفسیل
+// ══════════════════════════════════════════════
+function showDetail(name, backTab) {
+  const p = findStudent(name);
+  if(!p) { toast('قوتابی نەدۆزرایەوە', true); return; }
+  document.getElementById('t-detail-tab').classList.remove('hidden');
+  document.querySelector('[data-tab="t-detail"]').onclick = () => tTab(backTab);
+  document.getElementById('t-detail-content').innerHTML = buildDetailHTML(p);
+  tTab('t-detail');
+}
+
+function buildDetailHTML(p) {
+  const avg = overallAvg(p.grades);
+  const ac  = attCounts(p.attendance||[]);
+  const all = [...(p.culturalNotes||[]), ...(p.behavioralNotes||[])].sort((a,b) => b.date.localeCompare(a.date));
+
+  const gradeRows = p.grades && Object.keys(p.grades).length
+    ? Object.entries(p.grades).map(([subj,g]) => {
+        const a = subjectAvg(g);
+        return `<tr><td class="text-cream font-medium">${subj}</td><td>${gradeLabel(g.q1)}</td><td>${gradeLabel(g.q2)}</td><td>${gradeLabel(g.final)}</td><td><span class="badge ${gradeCls(a)}">${gradeLabel(a)}</span></td></tr>`;
+      }).join('')
+    : '<tr><td colspan="5" class="text-center text-muted py-3">نمرەی نییە</td></tr>';
+
+  const attRows = p.attendance && p.attendance.length
+    ? [...p.attendance].reverse().map(a =>
+        `<tr><td class="font-mono text-xs" dir="ltr">${a.date}</td><td><span class="flex items-center gap-1.5"><span class="att ${attDotCls(a.status)}"></span>${attLabel(a.status)}</span></td><td class="text-muted text-xs">${a.reason||'—'}</td></tr>`
+      ).join('')
+    : '<tr><td colspan="3" class="text-center text-muted py-3">تۆماری نییە</td></tr>';
+
+  const notesHTML = all.length
+    ? all.map(n => `<div class="note ${noteClass(n.category)}"><div class="flex items-center justify-between gap-2 mb-1"><span class="text-xs text-muted font-mono" dir="ltr">${n.date}</span><span class="text-xs text-muted">${n.author||''}</span></div><p>${n.note}</p></div>`).join('')
+    : '<p class="text-muted text-sm text-center py-3">تێبینیی نییە.</p>';
+
+  return `
+    <div class="card p-5">
+      <div class="sh"><span class="text-gold font-semibold">${p.fullName}</span></div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+        <div><p class="text-muted text-xs mb-1">تەلەفۆن</p><p class="text-cream font-mono text-xs" dir="ltr">${p.phone||'—'}</p></div>
+        <div><p class="text-muted text-xs mb-1">تێکڕای نمرە</p><span class="badge ${gradeCls(avg)}">${avg??'—'}</span></div>
+      </div>
+    </div>
+    <div class="card p-5">
+      <div class="sh"><span class="text-gold text-sm font-semibold">نمرەکان</span></div>
+      <div class="sx"><table class="tbl"><thead><tr><th>بابەت</th><th>پرسیاری یەکەم</th><th>پرسیاری دووەم</th><th>کۆتایی</th><th>ئاستی</th></tr></thead><tbody>${gradeRows}</tbody></table></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="card p-5">
+        <div class="sh"><span class="text-gold text-sm font-semibold">حازربوون</span></div>
+        <div class="flex gap-4 text-sm mb-3">
+          <span class="flex items-center gap-1.5"><span class="att att-p"></span>${ac.present} حازر</span>
+          <span class="flex items-center gap-1.5"><span class="att att-a"></span>${ac.absent} غایب</span>
+          <span class="flex items-center gap-1.5"><span class="att att-l"></span>${ac.late} دواکەوتوو</span>
+        </div>
+        <div class="sx" style="max-height:180px;overflow-y:auto">
+          <table class="tbl"><thead><tr><th>بەروار</th><th>دۆخ</th><th>هۆکار</th></tr></thead><tbody>${attRows}</tbody></table>
+        </div>
+      </div>
+      <div class="card p-5">
+        <div class="sh"><span class="text-gold text-sm font-semibold">تێبینییەکان</span></div>
+        <div class="space-y-2 overflow-y-auto" style="max-height:210px">${notesHTML}</div>
+      </div>
+    </div>`;
+}
+
+function tTab(id) {
+  document.querySelectorAll('#page-teacher .nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  document.querySelectorAll('#page-teacher .view').forEach(v => v.classList.toggle('active', v.id === id));
+}
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !document.getElementById('page-login').classList.contains('hidden')) doLogin();
+});
+</script>
+</body>
+</html>
