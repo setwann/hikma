@@ -1,0 +1,7 @@
+name = "hikma"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "HIKMA_KV"
+id = "1979fce9da70493ebea8f28effd91271"
