@@ -315,48 +315,20 @@
 </div>
 
 <script>
-
+const WORKER = "https://hikma.myrampro.workers.dev";
 
 // ══════════════════════════════════════════════
 //  GitHub API helpers
 // ══════════════════════════════════════════════
-const RAW = (path) =>
-  `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${path}?t=${Date.now()}`;
-
-async function ghGet(path) {
-  const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}?ref=${GH_BRANCH}`;
-  const r = await fetch(url, {
-    headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github.raw+json" }
-  });
-  if(!r.ok) throw new Error(`ghGet ${path}: ${r.status}`);
-  return r.json();
-}
-
-async function ghPut(path, content) {
-  // sha پێویستە بۆ نوێکردنەوە
-  const metaUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`;
-  const headers = {
-    "Authorization": `Bearer ${GH_TOKEN}`,
-    "Content-Type": "application/json"
-  };
-
-  const meta = await fetch(metaUrl, { headers });
-  if(!meta.ok) throw new Error(`ghPut meta ${path}: ${meta.status}`);
-  const { sha } = await meta.json();
-
-  const body = JSON.stringify({
-    message: `update ${path}`,
-    content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
-    sha,
-    branch: GH_BRANCH
-  });
-
-  const res = await fetch(metaUrl, { method: "PUT", headers, body });
-  if(!res.ok) {
-    const err = await res.json().catch(()=>({}));
-    throw new Error(err.message || `ghPut ${path}: ${res.status}`);
+async function apiCall(endpoint, method='GET', body=null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(WORKER + endpoint, opts);
+  if(!r.ok) {
+    const err = await r.json().catch(()=>({}));
+    throw new Error(err.error || `${endpoint}: ${r.status}`);
   }
-  return res.json();
+  return r.json();
 }
 
 // ══════════════════════════════════════════════
@@ -365,12 +337,9 @@ async function ghPut(path, content) {
 const DB = { students: [], teachers: [] };
 
 async function loadDB() {
-  const [teachers, students] = await Promise.all([
-    ghGet("teachers.json"),
-    ghGet("students.json")
-  ]);
-  DB.teachers = teachers;
-  DB.students = students;
+  const data = await apiCall('/api/data');
+  DB.teachers = data.teachers;
+  DB.students  = data.students;
 }
 
 // ھەڵوەشاندنەوەی ئاسان
@@ -614,9 +583,8 @@ async function submitAddStudent() {
       behavioralNotes: []
     };
 
-    const updated = [...DB.students, newStudent];
-    await ghPut("students.json", updated);
-    DB.students = updated;
+    await apiCall('/api/student', 'POST', { fullName: name, phone: phone });
+    await loadDB();
 
     document.getElementById('add-name').value = '';
     document.getElementById('add-phone').value = '';
@@ -685,16 +653,8 @@ async function acceptStudent(studentName) {
   btn.innerHTML = '<span class="spin"></span>';
 
   try {
-    // teachers.json نوێ بکەرەوە
-    const updatedTeachers = DB.teachers.map(t => {
-      if(t.fullName !== _profile.fullName) return t;
-      const students = t.students || [];
-      if(students.some(s => s.fullName === studentName)) return t;
-      return { ...t, students: [...students, { fullName: studentName, acceptedAt: new Date().toISOString() }] };
-    });
-
-    await ghPut("teachers.json", updatedTeachers);
-    DB.teachers = updatedTeachers;
+    await apiCall('/api/accept', 'POST', { teacherName: _profile.fullName, studentName });
+    await loadDB();
     _profile = findTeacher(_profile.fullName);
 
     renderPendingList();
