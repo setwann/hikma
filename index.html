@@ -402,22 +402,94 @@
 
     <!-- زیادکردنی مامۆستا (تەنها ئەدمین) -->
     <div id="t-add-teacher" class="view">
-      <div class="card p-6 max-w-lg mx-auto">
+      <div class="card p-6 max-w-2xl mx-auto">
         <div class="sh"><span class="text-gold font-semibold">زیادکردنی مامۆستای نوێ</span></div>
-        <div class="space-y-4 mt-4">
-          <div>
-            <label class="block text-xs text-muted mb-1.5">ناوی تەواو <span class="text-danger">*</span></label>
-            <input id="at-name" class="field" type="text" placeholder="ناوی مامۆستا..." autocomplete="off"/>
+        <p class="text-muted text-sm mb-6">خانەکانی ئەستێرەدار <span class="text-danger">*</span> پێویستە پڕ بکرێنەوە.</p>
+
+        <div class="space-y-5">
+
+          <!-- ناو + موبایل -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-muted mb-1.5">ناوی تەواو <span class="text-danger">*</span></label>
+              <input id="at-name" class="field" type="text" placeholder="ناوی مامۆستا..." autocomplete="off"/>
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1.5">ژمارەی موبایل <span class="text-danger">*</span></label>
+              <input id="at-phone" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs text-muted mb-1.5">ژمارەی موبایل <span class="text-danger">*</span></label>
-            <input id="at-phone" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
+
+          <!-- ناونیشان + پیشە -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-muted mb-1.5">ناونیشان</label>
+              <input id="at-address" class="field" type="text" placeholder="گەڕەک، شار..."/>
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1.5">پیشە</label>
+              <input id="at-job" class="field" type="text" placeholder="مامۆستا، ئیمام..."/>
+            </div>
           </div>
+
+          <!-- موجاز -->
           <div>
-            <label class="block text-xs text-muted mb-1.5">ئیمەیڵ</label>
-            <input id="at-email" class="field" type="email" placeholder="example@email.com" dir="ltr"/>
+            <label class="block text-xs text-muted mb-2">موجاز هەیە؟</label>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="at-ijaza" value="بەڵێ" class="accent-gold" onchange="atToggleIjaza(true)"/>
+                <span class="text-sm text-cream">بەڵێ</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="at-ijaza" value="نەخێر" class="accent-gold" checked onchange="atToggleIjaza(false)"/>
+                <span class="text-sm text-cream">نەخێر</span>
+              </label>
+            </div>
+            <input id="at-ijaza-detail" class="field hidden mt-2" type="text" placeholder="بەرامبەر موجاز..."/>
           </div>
+
+          <!-- مامۆستای وانە -->
+          <div>
+            <label class="block text-xs text-muted mb-2">مامۆستای وانە</label>
+            <div class="space-y-3">
+
+              <!-- تجوید -->
+              <div class="bg-mid/30 rounded-lg p-3">
+                <label class="flex items-center gap-2 cursor-pointer mb-2">
+                  <input type="checkbox" id="at-tajweed-check" class="accent-gold" onchange="atToggleSubject('tajweed')"/>
+                  <span class="text-sm text-cream font-medium">تجوید</span>
+                </label>
+                <div id="at-tajweed-stages" class="hidden pr-5">
+                  <label class="block text-xs text-muted mb-1">قۆناغی چەند؟</label>
+                  <input id="at-tajweed-stage" class="field" type="text" placeholder="قۆناغی ١، ٢..."/>
+                </div>
+              </div>
+
+              <!-- پەروەردە -->
+              <div class="bg-mid/30 rounded-lg p-3">
+                <label class="flex items-center gap-2 cursor-pointer mb-2">
+                  <input type="checkbox" id="at-edu-check" class="accent-gold" onchange="atToggleSubject('edu')"/>
+                  <span class="text-sm text-cream font-medium">پەروەردە</span>
+                </label>
+                <div id="at-edu-stages" class="hidden pr-5">
+                  <label class="block text-xs text-muted mb-1">قۆناغی چەند؟</label>
+                  <input id="at-edu-stage" class="field" type="text" placeholder="قۆناغی ١، ٢..."/>
+                </div>
+              </div>
+
+              <!-- قورئان -->
+              <div class="bg-mid/30 rounded-lg p-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="at-quran-check" class="accent-gold"/>
+                  <span class="text-sm text-cream font-medium">قورئان</span>
+                </label>
+              </div>
+
+            </div>
+          </div>
+
         </div>
+
         <p id="at-err" class="text-sm text-danger hidden mt-4"></p>
         <button class="btn-primary full mt-5" id="at-btn" onclick="submitAddTeacher()">تۆمارکردنی مامۆستا</button>
       </div>
@@ -756,6 +828,20 @@ async function submitAddStudent() {
 // ══════════════════════════════════════════════
 //  زیادکردنی مامۆستا (تەنها ئەدمین)
 // ══════════════════════════════════════════════
+function atToggleIjaza(show) {
+  document.getElementById('at-ijaza-detail').classList.toggle('hidden', !show);
+  if (!show) document.getElementById('at-ijaza-detail').value = '';
+}
+
+function atToggleSubject(type) {
+  const stagesMap = { tajweed: 'at-tajweed-stages', edu: 'at-edu-stages' };
+  const checkMap  = { tajweed: 'at-tajweed-check', edu: 'at-edu-check' };
+  if (!stagesMap[type]) return;
+  const checked = document.getElementById(checkMap[type]).checked;
+  document.getElementById(stagesMap[type]).classList.toggle('hidden', !checked);
+  if (!checked) document.getElementById(stagesMap[type]).querySelector('input').value = '';
+}
+
 async function submitAddTeacher() {
   const errEl = document.getElementById('at-err');
   const btn   = document.getElementById('at-btn');
@@ -763,21 +849,51 @@ async function submitAddTeacher() {
 
   const name  = document.getElementById('at-name').value.trim();
   const phone = document.getElementById('at-phone').value.trim();
-  const email = document.getElementById('at-email').value.trim();
 
   if (!name)  { errEl.textContent = 'ناوی مامۆستا پێویستە.'; errEl.classList.remove('hidden'); return; }
   if (!phone) { errEl.textContent = 'ژمارەی موبایل پێویستە.'; errEl.classList.remove('hidden'); return; }
   if (!/^07\d{9}$/.test(phone)) { errEl.textContent = 'ژمارەی مۆبایل دروست نییە. نموونە: 07701234567'; errEl.classList.remove('hidden'); return; }
 
+  // کۆکردنەوەی بابەتەکان
+  const subjects = [];
+  if (document.getElementById('at-quran-check').checked)
+    subjects.push({ name: 'قورئان' });
+  if (document.getElementById('at-tajweed-check').checked)
+    subjects.push({ name: 'تجوید', stage: document.getElementById('at-tajweed-stage').value.trim() });
+  if (document.getElementById('at-edu-check').checked)
+    subjects.push({ name: 'پەروەردە', stage: document.getElementById('at-edu-stage').value.trim() });
+
+  const ijazaRadio = document.querySelector('input[name="at-ijaza"]:checked');
+  const ijaza      = ijazaRadio ? ijazaRadio.value : 'نەخێر';
+  const ijazaDetail = ijaza === 'بەڵێ' ? document.getElementById('at-ijaza-detail').value.trim() : '';
+
+  const payload = {
+    fullName:    name,
+    phone,
+    address:     document.getElementById('at-address').value.trim(),
+    job:         document.getElementById('at-job').value.trim(),
+    ijaza,
+    ijazaDetail,
+    subjects,
+    assignedClasses: [],
+    students: [],
+  };
+
   btn.disabled = true;
   btn.innerHTML = '<span class="spin" style="margin-left:.4rem"></span> تۆمارکردن...';
 
   try {
-    await apiCall('/api/teacher', 'POST', { fullName: name, phone, email, assignedClasses: [], subjects: [], students: [] });
+    await apiCall('/api/teacher', 'POST', payload);
     await loadDB();
-    document.getElementById('at-name').value = '';
-    document.getElementById('at-phone').value = '';
-    document.getElementById('at-email').value = '';
+    // ڕیسێت
+    ['at-name','at-phone','at-address','at-job','at-ijaza-detail','at-tajweed-stage','at-edu-stage']
+      .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    ['at-tajweed-check','at-edu-check','at-quran-check']
+      .forEach(id => { document.getElementById(id).checked = false; });
+    ['at-tajweed-stages','at-edu-stages','at-ijaza-detail']
+      .forEach(id => { document.getElementById(id).classList.add('hidden'); });
+    const ijazaNo = document.querySelector('input[name="at-ijaza"][value="نەخێر"]');
+    if (ijazaNo) ijazaNo.checked = true;
     toast(`${name} تۆمارکرا ✓`);
     tTab('t-home');
   } catch(e) {
