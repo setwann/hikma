@@ -216,6 +216,7 @@
         <button class="nav-tab active" onclick="tTab('t-home')" data-tab="t-home">پرۆفایل</button>
         <button class="nav-tab" onclick="tTab('t-add')" data-tab="t-add">زیادکردنی قوتابی</button>
         <button class="nav-tab" onclick="tTab('t-list')" data-tab="t-list">هەموو قوتابییەکان</button>
+        <button class="nav-tab hidden" data-tab="t-add-teacher" id="t-add-teacher-tab" onclick="tTab('t-add-teacher')">زیادکردنی مامۆستا</button>
         <button class="nav-tab hidden" data-tab="t-detail" id="t-detail-tab">تەفسیل</button>
       </div>
       <button class="btn-ghost text-xs" onclick="doLogout()">دەرچوون</button>
@@ -396,6 +397,29 @@
           </table>
         </div>
         <p id="t-list-empty" class="hidden text-center text-muted py-8 text-sm">هیچ قوتابیێک نەدۆزرایەوە.</p>
+      </div>
+    </div>
+
+    <!-- زیادکردنی مامۆستا (تەنها ئەدمین) -->
+    <div id="t-add-teacher" class="view">
+      <div class="card p-6 max-w-lg mx-auto">
+        <div class="sh"><span class="text-gold font-semibold">زیادکردنی مامۆستای نوێ</span></div>
+        <div class="space-y-4 mt-4">
+          <div>
+            <label class="block text-xs text-muted mb-1.5">ناوی تەواو <span class="text-danger">*</span></label>
+            <input id="at-name" class="field" type="text" placeholder="ناوی مامۆستا..." autocomplete="off"/>
+          </div>
+          <div>
+            <label class="block text-xs text-muted mb-1.5">ژمارەی موبایل <span class="text-danger">*</span></label>
+            <input id="at-phone" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
+          </div>
+          <div>
+            <label class="block text-xs text-muted mb-1.5">ئیمەیڵ</label>
+            <input id="at-email" class="field" type="email" placeholder="example@email.com" dir="ltr"/>
+          </div>
+        </div>
+        <p id="at-err" class="text-sm text-danger hidden mt-4"></p>
+        <button class="btn-primary full mt-5" id="at-btn" onclick="submitAddTeacher()">تۆمارکردنی مامۆستا</button>
       </div>
     </div>
 
@@ -608,10 +632,20 @@ function sTab(id) {
 // ══════════════════════════════════════════════
 //  TEACHER RENDER
 // ══════════════════════════════════════════════
+const ADMIN_NAME = 'اركان دارا رشید';
+
 function renderTeacher(p) {
   showPage('teacher');
   document.getElementById('t-av').textContent = (p.fullName || 'م')[0];
   document.getElementById('t-nav-name').textContent = p.fullName || '—';
+
+  // ئەدمین دوگمەی زیادکردنی مامۆستا دەبینێت
+  const adminTab = document.getElementById('t-add-teacher-tab');
+  if (p.fullName === ADMIN_NAME) {
+    adminTab.classList.remove('hidden');
+  } else {
+    adminTab.classList.add('hidden');
+  }
 
   document.getElementById('t-profile-rows').innerHTML = [
     ['ناوی تەواو', p.fullName || '—'],
@@ -720,6 +754,42 @@ async function submitAddStudent() {
 }
 
 // ══════════════════════════════════════════════
+//  زیادکردنی مامۆستا (تەنها ئەدمین)
+// ══════════════════════════════════════════════
+async function submitAddTeacher() {
+  const errEl = document.getElementById('at-err');
+  const btn   = document.getElementById('at-btn');
+  errEl.classList.add('hidden');
+
+  const name  = document.getElementById('at-name').value.trim();
+  const phone = document.getElementById('at-phone').value.trim();
+  const email = document.getElementById('at-email').value.trim();
+
+  if (!name)  { errEl.textContent = 'ناوی مامۆستا پێویستە.'; errEl.classList.remove('hidden'); return; }
+  if (!phone) { errEl.textContent = 'ژمارەی موبایل پێویستە.'; errEl.classList.remove('hidden'); return; }
+  if (!/^07\d{9}$/.test(phone)) { errEl.textContent = 'ژمارەی مۆبایل دروست نییە. نموونە: 07701234567'; errEl.classList.remove('hidden'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin" style="margin-left:.4rem"></span> تۆمارکردن...';
+
+  try {
+    await apiCall('/api/teacher', 'POST', { fullName: name, phone, email, assignedClasses: [], subjects: [], students: [] });
+    await loadDB();
+    document.getElementById('at-name').value = '';
+    document.getElementById('at-phone').value = '';
+    document.getElementById('at-email').value = '';
+    toast(`${name} تۆمارکرا ✓`);
+    tTab('t-home');
+  } catch(e) {
+    errEl.textContent = 'هەڵە: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'تۆمارکردنی مامۆستا';
+}
+
+// ══════════════════════════════════════════════
 //  بازنەی سێتوان
 // ══════════════════════════════════════════════
 async function acceptStudent(studentName) {
@@ -776,8 +846,10 @@ function renderAllStudents() {
            <span class="text-cream font-medium">${s.fullName}</span>
          </td>`;
 
+    const isMyStudent = _profile && (_profile.fullName === ADMIN_NAME || (_profile.students||[]).some(ms => ms.fullName === s.fullName));
+
     const actionCell = owner
-      ? `<td><button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button></td>`
+      ? `<td>${isMyStudent ? `<button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>` : ''}</td>`
       : `<td>
            <div class="flex items-center gap-2">
              <input class="verify-input" id="vrf-${esc(s.fullName)}" type="text"
@@ -802,6 +874,12 @@ function renderAllStudents() {
 function showDetail(name, backTab) {
   const p = findStudent(name);
   if(!p) { toast('قوتابی نەدۆزرایەوە', true); return; }
+
+  // مامۆستا تەنها قوتابییەکانی خۆی دەبینێت، ئەدمین هەموویان
+  if (_profile && _profile.fullName !== ADMIN_NAME) {
+    const myStudents = (_profile.students || []).map(s => s.fullName);
+    if (!myStudents.includes(name)) { toast('ئەم قوتابییە هی تۆ نییە', true); return; }
+  }
   document.getElementById('t-detail-tab').classList.remove('hidden');
   document.querySelector('[data-tab="t-detail"]').onclick = () => tTab(backTab);
   document.getElementById('t-detail-content').innerHTML = buildDetailHTML(p);
