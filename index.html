@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>دەزگای ڕۆشنبیری نووری حیکمە — بازنەی سێتوان</title>
-  <script src="config.js"></script>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <script>
@@ -215,10 +215,6 @@
       <div class="flex gap-0.5 overflow-x-auto">
         <button class="nav-tab active" onclick="tTab('t-home')" data-tab="t-home">پرۆفایل</button>
         <button class="nav-tab" onclick="tTab('t-add')" data-tab="t-add">زیادکردنی قوتابی</button>
-        <button class="nav-tab" onclick="tTab('t-pending')" data-tab="t-pending">
-          بازنەی سێتوان <span id="t-pending-badge" class="tab-badge hidden">0</span>
-        </button>
-        <button class="nav-tab" onclick="tTab('t-mystudents')" data-tab="t-mystudents">قوتابییەکانم</button>
         <button class="nav-tab" onclick="tTab('t-list')" data-tab="t-list">هەموو قوتابییەکان</button>
         <button class="nav-tab hidden" data-tab="t-detail" id="t-detail-tab">تەفسیل</button>
       </div>
@@ -246,44 +242,142 @@
 
     <!-- زیادکردنی قوتابی -->
     <div id="t-add" class="view">
-      <div class="card p-6 max-w-md mx-auto">
+      <div class="card p-6 max-w-2xl mx-auto">
         <div class="sh"><span class="text-gold font-semibold">زیادکردنی قوتابی نوێ</span></div>
-        <p class="text-muted text-sm mb-5">ناو و ژمارەی مۆبایلی قوتابییەکە بنووسە. دوای تۆمارکردن دەکەوێتە بازنەی سێتوان.</p>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-xs text-muted mb-1.5">ناوی سێ‌پارچەیی قوتابی <span class="text-danger">*</span></label>
-            <input id="add-name" class="field" type="text" placeholder="کامەران علی حسەن" autocomplete="off"/>
+        <p class="text-muted text-sm mb-6">خانەکانی ئەستێرەدار <span class="text-danger">*</span> پێویستە پڕ بکرێنەوە.</p>
+
+        <div class="space-y-5">
+
+          <!-- ردیف ١: ناو + تەمەن -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-muted mb-1.5">ناوی قوتابی <span class="text-danger">*</span></label>
+              <input id="add-name" class="field" type="text" placeholder="کامەران علی حسەن" autocomplete="off"/>
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1.5">تەمەن</label>
+              <input id="add-age" class="field" type="number" placeholder="١٢" min="4" max="25"/>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs text-muted mb-1.5">ژمارەی مۆبایل <span class="text-danger">*</span></label>
-            <input id="add-phone" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
+
+          <!-- ردیف ٢: موبایل سەرپەرەشتیار + پیشەی باوک -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-muted mb-1.5">ژمارەی موبایلی سەرپەرەشتیار <span class="text-danger">*</span></label>
+              <input id="add-phone" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1.5">پیشەی باوک</label>
+              <input id="add-fatherJob" class="field" type="text" placeholder="مامەڵەکەر، مامۆستا..."/>
+            </div>
           </div>
+
+          <!-- ردیف ٣: باری دارایی -->
+          <div>
+            <label class="block text-xs text-muted mb-2">باری دارایی</label>
+            <div class="flex gap-3">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="add-financial" value="باش" class="accent-gold"/>
+                <span class="text-sm text-cream">باش</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="add-financial" value="خراپ" class="accent-gold"/>
+                <span class="text-sm text-cream">خراپ</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- ردیف ٤: گەڕەک + نزیکترین شوێن -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-muted mb-1.5">گەڕەک</label>
+              <input id="add-neighborhood" class="field" type="text" placeholder="گەڕەکی..."/>
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1.5">نزیکترین شوێن لە ماڵیانەوە</label>
+              <input id="add-landmark" class="field" type="text" placeholder="نزیک مزگەوت، بازاڕ..."/>
+            </div>
+          </div>
+
+          <!-- ردیف ٥: نەخۆشی -->
+          <div>
+            <label class="block text-xs text-muted mb-2">نەخۆشی</label>
+            <div class="flex gap-3 mb-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="add-illness" value="نیەتی" checked class="accent-gold" onchange="toggleIllness(false)"/>
+                <span class="text-sm text-cream">نیەتی</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="add-illness" value="هەیەتی" class="accent-gold" onchange="toggleIllness(true)"/>
+                <span class="text-sm text-cream">هەیەتی</span>
+              </label>
+            </div>
+            <input id="add-illnessDetail" class="field hidden" type="text" placeholder="چۆن نەخۆشییەکە؟"/>
+          </div>
+
+          <!-- ردیف ٦: ئاستی خوێندن + ئاستی قوتابی -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-muted mb-1.5">ئاستی خوێندن</label>
+              <input id="add-educationLevel" class="field" type="text" placeholder="پۆلی ٥، ناوەندی..."/>
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1.5">ئاستیی قوتابی</label>
+              <select id="add-studentLevel" class="field">
+                <option value="">— هەڵبژێرە —</option>
+                <option value="باش">باش</option>
+                <option value="تەواو باش">تەواو باش</option>
+                <option value="مامناوەند">مامناوەند</option>
+                <option value="کەم">کەم</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ردیف ٧: قوتابی (جزء) -->
+          <div>
+            <label class="block text-xs text-muted mb-2">قوتابی</label>
+            <div class="flex flex-wrap gap-3">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="add-juz-amma" class="accent-gold"/>
+                <span class="text-sm text-cream">جوزئی عم</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="add-juz-tabarak" class="accent-gold"/>
+                <span class="text-sm text-cream">جوزئی تبارک</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="add-juz-khatm" class="accent-gold"/>
+                <span class="text-sm text-cream">ختم</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- ردیف ٨: مامۆستاکان -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs text-muted mb-1.5">ناوی مامۆستای قورئان</label>
+              <input id="add-teacherQuran" class="field" type="text" placeholder="ناوی مامۆستا..."/>
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1.5">ناوی مامۆستای پەروەردە</label>
+              <input id="add-teacherEducation" class="field" type="text" placeholder="ناوی مامۆستا..."/>
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1.5">ناوی مامۆستای تجوید</label>
+              <input id="add-teacherTajweed" class="field" type="text" placeholder="ناوی مامۆستا..."/>
+            </div>
+          </div>
+
+          <!-- ردیف ٩: تێبینی -->
+          <div>
+            <label class="block text-xs text-muted mb-1.5">تێبینی</label>
+            <textarea id="add-notes" class="field" rows="3" placeholder="هەر تێبینییەک..."></textarea>
+          </div>
+
         </div>
-        <p id="add-err" class="text-sm text-danger hidden mt-3"></p>
+
+        <p id="add-err" class="text-sm text-danger hidden mt-4"></p>
         <button class="btn-primary full mt-5" id="add-btn" onclick="submitAddStudent()">تۆمارکردن و ناردن بۆ بازنەی سێتوان</button>
-      </div>
-    </div>
-
-    <!-- بازنەی سێتوان -->
-    <div id="t-pending" class="view">
-      <div class="card p-5">
-        <div class="sh"><span class="text-gold font-semibold">بازنەی سێتوان</span></div>
-        <p class="text-muted text-sm mb-4">قوتابییانەی کە مامۆستایان نییە. بۆ قبووڵکردن، ناوی تەواوی قوتابییەکە بنووسە.</p>
-        <div id="t-pending-list" class="space-y-3"></div>
-      </div>
-    </div>
-
-    <!-- قوتابییەکانم -->
-    <div id="t-mystudents" class="view">
-      <div class="card p-5">
-        <div class="sh"><span class="text-gold font-semibold">قوتابییەکانم</span></div>
-        <div class="sx">
-          <table class="tbl">
-            <thead><tr><th>ناوی تەواو</th><th>تەلەفۆن</th><th></th></tr></thead>
-            <tbody id="t-mystudents-body"></tbody>
-          </table>
-        </div>
-        <p id="t-mystudents-empty" class="hidden text-center text-muted py-8 text-sm">هێشتا قوتابیت نییە.</p>
       </div>
     </div>
 
@@ -297,7 +391,7 @@
         </div>
         <div class="sx">
           <table class="tbl">
-            <thead><tr><th>ناوی تەواو</th><th>تەلەفۆن</th><th>مامۆستا</th><th>دۆخ</th><th></th></tr></thead>
+            <thead><tr><th>ناوی قوتابی</th><th>تەلەفۆن</th><th></th></tr></thead>
             <tbody id="t-list-body"></tbody>
           </table>
         </div>
@@ -318,7 +412,7 @@
 const WORKER = "https://hikma.myrampro.workers.dev";
 
 // ══════════════════════════════════════════════
-//  GitHub API helpers
+//  Worker API — KV Only
 // ══════════════════════════════════════════════
 async function apiCall(endpoint, method='GET', body=null) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
@@ -345,19 +439,6 @@ async function loadDB() {
 // ھەڵوەشاندنەوەی ئاسان
 function findTeacher(name) { return DB.teachers.find(t => t.fullName === name); }
 function findStudent(name) { return DB.students.find(s => s.fullName === name); }
-
-// قوتابییەکانی بازنەی سێتوان = قوتابییانی students.json کە لە هیچ مامۆستایەکی teachers.json‌دا نین
-function getPendingStudents() {
-  const claimed = new Set(DB.teachers.flatMap(t => (t.students || []).map(s => s.fullName)));
-  return DB.students.filter(s => !claimed.has(s.fullName));
-}
-
-// قوتابییەکانی مامۆستایەک
-function getMyStudents(teacherName) {
-  const t = findTeacher(teacherName);
-  if(!t || !t.students) return [];
-  return t.students.map(ts => findStudent(ts.fullName) || ts);
-}
 
 // ══════════════════════════════════════════════
 //  STATE
@@ -543,8 +624,6 @@ function renderTeacher(p) {
   document.getElementById('t-subject-chips').innerHTML =
     (p.subjects||[]).map(s => `<span class="text-xs bg-gold/10 text-goldlt px-2 py-0.5 rounded">${s}</span>`).join('') || '<span class="text-muted text-sm">—</span>';
 
-  renderPendingList();
-  renderMyStudents();
   renderAllStudents();
   tTab('t-home');
 }
@@ -552,47 +631,85 @@ function renderTeacher(p) {
 // ══════════════════════════════════════════════
 //  زیادکردنی قوتابی → students.json
 // ══════════════════════════════════════════════
+function toggleIllness(show) {
+  const el = document.getElementById('add-illnessDetail');
+  el.classList.toggle('hidden', !show);
+  if (!show) el.value = '';
+}
+
 async function submitAddStudent() {
-  const name  = document.getElementById('add-name').value.trim();
-  const phone = document.getElementById('add-phone').value.trim();
   const errEl = document.getElementById('add-err');
   const btn   = document.getElementById('add-btn');
   errEl.classList.add('hidden');
 
-  if(!name) { errEl.textContent = 'ناوی قوتابی پێویستە.'; errEl.classList.remove('hidden'); return; }
-  if(!phone) { errEl.textContent = 'ژمارەی مۆبایل پێویستە.'; errEl.classList.remove('hidden'); return; }
-  if(!/^07\d{9}$/.test(phone)) { errEl.textContent = 'ژمارەی مۆبایل دروست نییە. نموونە: 07701234567'; errEl.classList.remove('hidden'); return; }
+  // خانەی پێویست
+  const name  = document.getElementById('add-name').value.trim();
+  const phone = document.getElementById('add-phone').value.trim();
 
-  if(findStudent(name)) {
+  if (!name)  { errEl.textContent = 'ناوی قوتابی پێویستە.'; errEl.classList.remove('hidden'); document.getElementById('add-name').focus(); return; }
+  if (!phone) { errEl.textContent = 'ژمارەی موبایلی سەرپەرەشتیار پێویستە.'; errEl.classList.remove('hidden'); document.getElementById('add-phone').focus(); return; }
+  if (!/^07\d{9}$/.test(phone)) { errEl.textContent = 'ژمارەی مۆبایل دروست نییە. نموونە: 07701234567'; errEl.classList.remove('hidden'); return; }
+
+  if (findStudent(name)) {
     errEl.textContent = 'ئەم ناوە پێشتر تۆمارکراوە.'; errEl.classList.remove('hidden'); return;
   }
+
+  // کۆکردنەوەی هەموو خانەکان
+  const illnessRadio   = document.querySelector('input[name="add-illness"]:checked');
+  const financialRadio = document.querySelector('input[name="add-financial"]:checked');
+  const illnessVal     = illnessRadio ? illnessRadio.value : 'نیەتی';
+  const illnessDetail  = illnessVal === 'هەیەتی' ? document.getElementById('add-illnessDetail').value.trim() : '';
+
+  const juz = [];
+  if (document.getElementById('add-juz-amma').checked)    juz.push('جوزئی عم');
+  if (document.getElementById('add-juz-tabarak').checked) juz.push('جوزئی تبارک');
+  if (document.getElementById('add-juz-khatm').checked)   juz.push('ختم');
+
+  const payload = {
+    fullName:         name,
+    phone:            phone,
+    age:              document.getElementById('add-age').value.trim(),
+    fatherJob:        document.getElementById('add-fatherJob').value.trim(),
+    financialStatus:  financialRadio ? financialRadio.value : '',
+    neighborhood:     document.getElementById('add-neighborhood').value.trim(),
+    landmark:         document.getElementById('add-landmark').value.trim(),
+    illness:          illnessVal,
+    illnessDetail:    illnessDetail,
+    educationLevel:   document.getElementById('add-educationLevel').value.trim(),
+    studentLevel:     document.getElementById('add-studentLevel').value,
+    memorization:     juz,
+    teacherQuran:     document.getElementById('add-teacherQuran').value.trim(),
+    teacherEducation: document.getElementById('add-teacherEducation').value.trim(),
+    teacherTajweed:   document.getElementById('add-teacherTajweed').value.trim(),
+    notes:            document.getElementById('add-notes').value.trim(),
+    // فیلدە کۆنەکان بەتاڵ دەمێنن
+    birthYear: '', classGroup: '', parentName: '',
+    grades: {}, attendance: [], culturalNotes: [], behavioralNotes: [],
+  };
 
   btn.disabled = true;
   btn.innerHTML = '<span class="spin" style="margin-left:.4rem"></span> تۆمارکردن...';
 
   try {
-    const newStudent = {
-      fullName: name,
-      phone: phone,
-      birthYear: "",
-      classGroup: "",
-      parentName: "",
-      grades: {},
-      attendance: [],
-      culturalNotes: [],
-      behavioralNotes: []
-    };
-
-    await apiCall('/api/student', 'POST', { fullName: name, phone: phone });
+    await apiCall('/api/student', 'POST', payload);
     await loadDB();
 
-    document.getElementById('add-name').value = '';
-    document.getElementById('add-phone').value = '';
+    // ڕیسێتی فۆرم
+    ['add-name','add-age','add-phone','add-fatherJob','add-neighborhood',
+     'add-landmark','add-illnessDetail','add-educationLevel',
+     'add-teacherQuran','add-teacherEducation','add-teacherTajweed','add-notes']
+      .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    document.getElementById('add-studentLevel').value = '';
+    ['add-juz-amma','add-juz-tabarak','add-juz-khatm'].forEach(id => {
+      document.getElementById(id).checked = false;
+    });
+    const illNone = document.querySelector('input[name="add-illness"][value="نیەتی"]');
+    if (illNone) { illNone.checked = true; toggleIllness(false); }
+    document.querySelectorAll('input[name="add-financial"]').forEach(r => r.checked = false);
 
-    renderPendingList();
     renderAllStudents();
     toast(`${name} تۆمارکرا ✓`);
-    tTab('t-pending');
+    tTab('t-list');
   } catch(e) {
     errEl.textContent = 'هەڵە لە تۆمارکردن: ' + e.message;
     errEl.classList.remove('hidden');
@@ -605,86 +722,29 @@ async function submitAddStudent() {
 // ══════════════════════════════════════════════
 //  بازنەی سێتوان
 // ══════════════════════════════════════════════
-function renderPendingList() {
-  const pending = getPendingStudents();
-  const badge   = document.getElementById('t-pending-badge');
-  const listEl  = document.getElementById('t-pending-list');
-
-  badge.textContent = pending.length;
-  badge.classList.toggle('hidden', pending.length === 0);
-
-  if(!pending.length) {
-    listEl.innerHTML = '<p class="text-center text-muted py-8 text-sm">کەسی چاوەڕوان نییە.</p>';
-    return;
-  }
-
-  listEl.innerHTML = pending.map(p => `
-    <div class="pending-card">
-      <div class="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <p class="font-semibold text-cream">${p.fullName}</p>
-          <p class="text-xs font-mono text-muted" dir="ltr">${p.phone}</p>
-        </div>
-      </div>
-      <div class="verify-row">
-        <input class="verify-input" id="vrf-${esc(p.fullName)}" type="text"
-          placeholder="ناوی تەواو بنووسە بۆ دڵنیابوون..." autocomplete="off"/>
-        <button class="btn-ok" id="vrf-btn-${esc(p.fullName)}"
-          onclick="acceptStudent('${esc(p.fullName)}')">✓ قبووڵکردن</button>
-      </div>
-      <p id="vrf-err-${esc(p.fullName)}" class="text-xs text-danger hidden mt-1"></p>
-    </div>
-  `).join('');
-}
-
 async function acceptStudent(studentName) {
   const inputEl = document.getElementById('vrf-' + studentName);
   const errEl   = document.getElementById('vrf-err-' + studentName);
-  const btn     = document.getElementById('vrf-btn-' + studentName);
   const typed   = inputEl ? inputEl.value.trim() : '';
-  errEl.classList.add('hidden');
+  if (errEl) errEl.classList.add('hidden');
 
-  if(typed !== studentName) {
-    errEl.textContent = 'ناوەکە هەڵەیە. تکایە ناوی تەواوی قوتابی بنووسە.';
-    errEl.classList.remove('hidden'); return;
+  if (typed !== studentName) {
+    if (errEl) { errEl.textContent = 'ناوەکە هەڵەیە. تکایە ناوی تەواوی قوتابی بنووسە.'; errEl.classList.remove('hidden'); }
+    return;
   }
 
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span>';
+  if (inputEl) inputEl.disabled = true;
 
   try {
     await apiCall('/api/accept', 'POST', { teacherName: _profile.fullName, studentName });
     await loadDB();
     _profile = findTeacher(_profile.fullName);
-
-    renderPendingList();
-    renderMyStudents();
     renderAllStudents();
-    toast(`${studentName} قبووڵکرا ✓`);
+    toast(`${studentName} سەحکرا ✓`);
   } catch(e) {
-    errEl.textContent = 'هەڵە: ' + e.message;
-    errEl.classList.remove('hidden');
-    btn.disabled = false;
-    btn.textContent = '✓ قبووڵکردن';
+    if (errEl) { errEl.textContent = 'هەڵە: ' + e.message; errEl.classList.remove('hidden'); }
+    if (inputEl) inputEl.disabled = false;
   }
-}
-
-// ══════════════════════════════════════════════
-//  قوتابییەکانم
-// ══════════════════════════════════════════════
-function renderMyStudents() {
-  const list  = getMyStudents(_profile.fullName);
-  const tbody = document.getElementById('t-mystudents-body');
-  const empty = document.getElementById('t-mystudents-empty');
-
-  empty.classList.toggle('hidden', list.length > 0);
-  tbody.innerHTML = list.map(s => `
-    <tr>
-      <td class="text-cream font-medium">${s.fullName}</td>
-      <td dir="ltr" class="font-mono text-xs">${s.phone||'—'}</td>
-      <td><button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-mystudents')">بینین</button></td>
-    </tr>
-  `).join('');
 }
 
 // ══════════════════════════════════════════════
@@ -699,26 +759,39 @@ function renderAllStudents() {
   const ownerMap = {};
   DB.teachers.forEach(t => (t.students||[]).forEach(s => { ownerMap[s.fullName] = t.fullName; }));
 
-  const myName = _profile.fullName;
-
   const list = DB.students
-    .filter(s => !search || s.fullName.toLowerCase().includes(search))
-    .sort((a,b) => a.fullName.localeCompare(b.fullName));
+    .filter(s => !search || s.fullName.includes(search) || s.fullName.toLowerCase().includes(search))
+    .sort((a,b) => a.fullName.localeCompare(b.fullName, 'ar'));
 
   empty.classList.toggle('hidden', list.length > 0);
+
   tbody.innerHTML = list.map(s => {
-    const owner  = ownerMap[s.fullName];
-    const isMine = owner === myName;
-    const ownerLabel = owner
-      ? (isMine ? '<span class="text-xs bg-ok/20 text-ok border border-ok/30 px-2 py-0.5 rounded">قوتابیم</span>'
-                : `<span class="text-xs text-muted">${owner}</span>`)
-      : '<span class="text-xs text-warn">بازنەی سێتوان</span>';
+    const owner = ownerMap[s.fullName];
+    const nameCell = owner
+      ? `<td>
+           <span class="text-cream font-medium">${s.fullName}</span>
+           <span class="text-muted text-xs mr-2">${owner}</span>
+         </td>`
+      : `<td>
+           <span class="text-cream font-medium">${s.fullName}</span>
+         </td>`;
+
+    const actionCell = owner
+      ? `<td><button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button></td>`
+      : `<td>
+           <div class="flex items-center gap-2">
+             <input class="verify-input" id="vrf-${esc(s.fullName)}" type="text"
+               placeholder="ناو بنووسە بۆ سەح..." autocomplete="off" style="width:160px"/>
+             <button class="btn-ok text-xs" onclick="acceptStudent('${esc(s.fullName)}')">✓ سەح</button>
+             <button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>
+           </div>
+           <p id="vrf-err-${esc(s.fullName)}" class="text-xs text-danger hidden mt-1"></p>
+         </td>`;
+
     return `<tr>
-      <td class="text-cream font-medium">${s.fullName}</td>
+      ${nameCell}
       <td dir="ltr" class="font-mono text-xs">${s.phone||'—'}</td>
-      <td>${ownerLabel}</td>
-      <td>${owner ? '' : '—'}</td>
-      <td><button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button></td>
+      ${actionCell}
     </tr>`;
   }).join('');
 }
@@ -740,6 +813,21 @@ function buildDetailHTML(p) {
   const ac  = attCounts(p.attendance||[]);
   const all = [...(p.culturalNotes||[]), ...(p.behavioralNotes||[])].sort((a,b) => b.date.localeCompare(a.date));
 
+  function row(label, val) {
+    return `<div class="flex justify-between gap-2 py-1 border-b border-white/5">
+      <span class="text-muted text-xs shrink-0">${label}</span>
+      <span class="text-cream text-xs text-right">${val||'—'}</span>
+    </div>`;
+  }
+
+  const illnessText = p.illness === 'هەیەتی'
+    ? `هەیەتی${p.illnessDetail ? ' — ' + p.illnessDetail : ''}`
+    : (p.illness || 'نیەتی');
+
+  const memText = (p.memorization && p.memorization.length)
+    ? p.memorization.join('، ')
+    : '—';
+
   const gradeRows = p.grades && Object.keys(p.grades).length
     ? Object.entries(p.grades).map(([subj,g]) => {
         const a = subjectAvg(g);
@@ -758,17 +846,41 @@ function buildDetailHTML(p) {
     : '<p class="text-muted text-sm text-center py-3">تێبینیی نییە.</p>';
 
   return `
-    <div class="card p-5">
-      <div class="sh"><span class="text-gold font-semibold">${p.fullName}</span></div>
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-        <div><p class="text-muted text-xs mb-1">تەلەفۆن</p><p class="text-cream font-mono text-xs" dir="ltr">${p.phone||'—'}</p></div>
-        <div><p class="text-muted text-xs mb-1">تێکڕای نمرە</p><span class="badge ${gradeCls(avg)}">${avg??'—'}</span></div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <div class="card p-5">
+        <div class="sh"><span class="text-gold font-semibold">${p.fullName}</span></div>
+        <div class="space-y-0.5">
+          ${row('تەمەن', p.age)}
+          ${row('ژمارەی موبایلی سەرپەرەشتیار', `<span dir="ltr" class="font-mono">${p.phone||'—'}</span>`)}
+          ${row('پیشەی باوک', p.fatherJob)}
+          ${row('باری دارایی', p.financialStatus)}
+          ${row('گەڕەک', p.neighborhood)}
+          ${row('نزیکترین شوێن', p.landmark)}
+          ${row('نەخۆشی', illnessText)}
+        </div>
       </div>
+
+      <div class="card p-5">
+        <div class="sh"><span class="text-gold font-semibold">زانیارییە خوێندنییەکان</span></div>
+        <div class="space-y-0.5">
+          ${row('ئاستی خوێندن', p.educationLevel)}
+          ${row('ئاستیی قوتابی', p.studentLevel)}
+          ${row('قوتابی (جزء)', memText)}
+          ${row('مامۆستای قورئان', p.teacherQuran)}
+          ${row('مامۆستای پەروەردە', p.teacherEducation)}
+          ${row('مامۆستای تجوید', p.teacherTajweed)}
+        </div>
+        ${p.notes ? `<div class="mt-3 p-3 rounded bg-white/5 text-xs text-cream"><span class="text-muted block mb-1">تێبینی</span>${p.notes}</div>` : ''}
+      </div>
+
     </div>
+
     <div class="card p-5">
       <div class="sh"><span class="text-gold text-sm font-semibold">نمرەکان</span></div>
       <div class="sx"><table class="tbl"><thead><tr><th>بابەت</th><th>پرسیاری یەکەم</th><th>پرسیاری دووەم</th><th>کۆتایی</th><th>ئاستی</th></tr></thead><tbody>${gradeRows}</tbody></table></div>
     </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="card p-5">
         <div class="sh"><span class="text-gold text-sm font-semibold">حازربوون</span></div>
