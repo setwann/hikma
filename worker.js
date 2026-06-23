@@ -135,10 +135,13 @@ export default {
         const newTeacher = {
           fullName,
           phone,
-          email:          body.email           || "",
+          address:         body.address         || "",
+          job:             body.job             || "",
+          ijaza:           body.ijaza           || "نەخێر",
+          ijazaDetail:     body.ijazaDetail     || "",
+          subjects:        body.subjects        || [],
           assignedClasses: body.assignedClasses || [],
-          subjects:       body.subjects         || [],
-          students:       [],
+          students:        [],
         };
 
         teachers.push(newTeacher);
