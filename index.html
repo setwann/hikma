@@ -1508,16 +1508,29 @@ async function submitEditStudent() {
 let _trStudent = '';
 let _trSubject = '';
 
+let _trFromTeacher = '';
+
 function openTransferModal(studentName, subject) {
   _trStudent = studentName;
   _trSubject = subject;
+
+  // دۆزینەوەی fromTeacher: مامۆستایەکی هەیەی ئەم قوتابییە
+  const ownerEntry = DB.teachers.find(t =>
+    (t.students || []).some(s => {
+      const norm = v => (v == null ? "" : String(v).trim());
+      const subj = norm(subject);
+      return s.fullName === studentName && (subj === "" || norm(s.subject) === subj);
+    })
+  );
+  _trFromTeacher = ownerEntry ? ownerEntry.fullName : (_profile ? _profile.fullName : '');
+
   const subLabel = { quran:'قورئان', tajweed:'تجوید', edu:'پەروەردە' };
   document.getElementById('mtr-title').textContent = 'گواستنەوە — ' + studentName;
-  document.getElementById('mtr-info').textContent  = `بەش: ${subLabel[subject]||subject||'—'}`;
-  // پڕکردنی لیستی مامۆستاکان (خۆی نەبێت)
+  document.getElementById('mtr-info').textContent  = `بەش: ${subLabel[subject]||subject||'—'} | مامۆستای کۆن: ${_trFromTeacher||'—'}`;
+  // لیستی مامۆستاکان بەبێ مامۆستای کۆن
   const sel = document.getElementById('mtr-teacher');
   sel.innerHTML = DB.teachers
-    .filter(t => t.fullName !== (_profile && _profile.fullName))
+    .filter(t => t.fullName !== _trFromTeacher)
     .map(t => `<option value="${esc(t.fullName)}">${t.fullName}</option>`)
     .join('');
   document.getElementById('mtr-err').classList.add('hidden');
@@ -1535,7 +1548,7 @@ async function submitTransfer() {
 
   try {
     await apiCall('/api/transfer', 'POST', {
-      fromTeacher: _profile.fullName,
+      fromTeacher: _trFromTeacher || (_profile ? _profile.fullName : ''),
       toTeacher:   newTeacher,
       studentName: _trStudent,
       subject:     _trSubject,
