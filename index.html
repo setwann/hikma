@@ -367,16 +367,22 @@
           <!-- ردیف ٨: مامۆستاکان -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label class="block text-xs text-muted mb-1.5">ناوی مامۆستای قورئان</label>
-              <input id="add-teacherQuran" class="field" type="text" placeholder="ناوی مامۆستا..."/>
+              <label class="block text-xs text-muted mb-1.5">مامۆستای قورئان</label>
+              <select id="add-teacherQuran" class="field">
+                <option value="">— هیچ —</option>
+              </select>
             </div>
             <div>
-              <label class="block text-xs text-muted mb-1.5">ناوی مامۆستای پەروەردە</label>
-              <input id="add-teacherEducation" class="field" type="text" placeholder="ناوی مامۆستا..."/>
+              <label class="block text-xs text-muted mb-1.5">مامۆستای پەروەردە</label>
+              <select id="add-teacherEducation" class="field">
+                <option value="">— هیچ —</option>
+              </select>
             </div>
             <div>
-              <label class="block text-xs text-muted mb-1.5">ناوی مامۆستای تجوید</label>
-              <input id="add-teacherTajweed" class="field" type="text" placeholder="ناوی مامۆستا..."/>
+              <label class="block text-xs text-muted mb-1.5">مامۆستای تجوید</label>
+              <select id="add-teacherTajweed" class="field">
+                <option value="">— هیچ —</option>
+              </select>
             </div>
           </div>
 
@@ -1071,7 +1077,7 @@ function buildDetailHTML(p) {
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
       <div class="card p-5">
-        <div class="sh"><span class="text-gold font-semibold">${p.fullName}</span></div>
+        <div class="sh flex items-center justify-between"><span class="text-gold font-semibold">${p.fullName}</span><button class="btn-ghost text-xs" onclick="openEditModal('${esc(p.fullName)}')">✏️ ویراستاری</button></div>
         <div class="space-y-0.5">
           ${row('تەمەن', p.age)}
           ${row('ژمارەی موبایلی سەرپەرەشتیار', `<span dir="ltr" class="font-mono">${p.phone||'—'}</span>`)}
@@ -1123,9 +1129,21 @@ function buildDetailHTML(p) {
     </div>`;
 }
 
+function populateTeacherSelects(selIds, currentVals) {
+  const opts = '<option value="">— هیچ —</option>' +
+    DB.teachers.map(t => `<option value="${esc(t.fullName)}">${t.fullName}</option>`).join('');
+  selIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = opts;
+    if (currentVals && currentVals[i]) el.value = currentVals[i];
+  });
+}
+
 function tTab(id) {
   document.querySelectorAll('#page-teacher .nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
   document.querySelectorAll('#page-teacher .view').forEach(v => v.classList.toggle('active', v.id === id));
+  if (id === 't-add') populateTeacherSelects(['add-teacherQuran','add-teacherEducation','add-teacherTajweed']);
 }
 
 document.addEventListener('keydown', e => {
@@ -1305,8 +1323,72 @@ async function submitLessons() {
 }
 
 // ══════════════════════════════════════════════
-//  گواستنەوەی قوتابی بۆ مامۆستایەکی تر
+//  ویراستاریکردنی قوتابی
 // ══════════════════════════════════════════════
+function openEditModal(name) {
+  const p = findStudent(name);
+  if (!p) return;
+  document.getElementById('medit-title').textContent = 'ویراستاری — ' + name;
+  document.getElementById('medit-name').value             = p.fullName || '';
+  document.getElementById('medit-age').value              = p.age || '';
+  document.getElementById('medit-phone').value            = p.phone || '';
+  document.getElementById('medit-fatherJob').value        = p.fatherJob || '';
+  document.getElementById('medit-financialStatus').value  = p.financialStatus || '';
+  document.getElementById('medit-neighborhood').value     = p.neighborhood || '';
+  document.getElementById('medit-landmark').value         = p.landmark || '';
+  document.getElementById('medit-educationLevel').value   = p.educationLevel || '';
+  document.getElementById('medit-studentLevel').value     = p.studentLevel || '';
+  document.getElementById('medit-illness').value          = p.illness || 'نیەتی';
+  document.getElementById('medit-illnessDetail').value    = p.illnessDetail || '';
+  document.getElementById('medit-illnessDetail').classList.toggle('hidden', p.illness !== 'هەیەتی');
+  document.getElementById('medit-notes').value            = p.notes || '';
+  populateTeacherSelects(
+    ['medit-teacherQuran','medit-teacherEducation','medit-teacherTajweed'],
+    [p.teacherQuran, p.teacherEducation, p.teacherTajweed]
+  );
+  document.getElementById('medit-err').classList.add('hidden');
+  document.getElementById('modal-edit').classList.remove('hidden');
+}
+
+async function submitEditStudent() {
+  const errEl = document.getElementById('medit-err');
+  errEl.classList.add('hidden');
+  const name = document.getElementById('medit-name').value;
+  const s = findStudent(name);
+  if (!s) return;
+
+  const illness = document.getElementById('medit-illness').value;
+  const updated = {
+    fullName:        name,
+    age:             document.getElementById('medit-age').value.trim(),
+    phone:           document.getElementById('medit-phone').value.trim(),
+    fatherJob:       document.getElementById('medit-fatherJob').value.trim(),
+    financialStatus: document.getElementById('medit-financialStatus').value,
+    neighborhood:    document.getElementById('medit-neighborhood').value.trim(),
+    landmark:        document.getElementById('medit-landmark').value.trim(),
+    educationLevel:  document.getElementById('medit-educationLevel').value.trim(),
+    studentLevel:    document.getElementById('medit-studentLevel').value,
+    illness,
+    illnessDetail:   illness === 'هەیەتی' ? document.getElementById('medit-illnessDetail').value.trim() : '',
+    teacherQuran:    document.getElementById('medit-teacherQuran').value,
+    teacherEducation:document.getElementById('medit-teacherEducation').value,
+    teacherTajweed:  document.getElementById('medit-teacherTajweed').value,
+    notes:           document.getElementById('medit-notes').value.trim(),
+  };
+
+  try {
+    await apiCall('/api/student', 'PUT', updated);
+    await loadDB();
+    closeModal('modal-edit');
+    // نوێکردنەوەی detail view
+    const p2 = findStudent(name);
+    if (p2) document.getElementById('t-detail-content').innerHTML = buildDetailHTML(p2);
+    toast(`${name} نوێکرایەوە ✓`);
+  } catch(e) {
+    errEl.textContent = 'هەڵە: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
 let _trStudent = '';
 let _trSubject = '';
 
@@ -1359,7 +1441,7 @@ function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
 }
 // کلیکی دەرەوەی مۆدال داخستنی
-['modal-att','modal-lessons','modal-accept','modal-transfer'].forEach(id => {
+['modal-att','modal-lessons','modal-accept','modal-transfer','modal-edit'].forEach(id => {
   document.getElementById(id)?.addEventListener('click', e => {
     if (e.target.id === id) closeModal(id);
   });
@@ -1460,6 +1542,95 @@ function closeModal(id) {
     </div>
     <p id="mtr-err" class="text-danger text-xs hidden"></p>
     <button class="btn-primary w-full" onclick="submitTransfer()">گواستنەوە</button>
+  </div>
+</div>
+
+<!-- ══ مۆدالی ویراستاری قوتابی ══ -->
+<div id="modal-edit" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.65);overflow-y:auto">
+  <div class="card p-6 w-full max-w-lg space-y-4" style="margin:auto">
+    <div class="flex items-center justify-between">
+      <h3 class="text-gold font-semibold" id="medit-title">ویراستاری قوتابی</h3>
+      <button class="text-muted hover:text-cream text-lg leading-none" onclick="closeModal('modal-edit')">✕</button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs text-muted mb-1">ناوی قوتابی</label>
+        <input id="medit-name" class="field" type="text" disabled style="opacity:.5"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">تەمەن</label>
+        <input id="medit-age" class="field" type="number" min="4" max="25"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">موبایلی سەرپەرەشتیار</label>
+        <input id="medit-phone" class="field" type="tel" dir="ltr"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">پیشەی باوک</label>
+        <input id="medit-fatherJob" class="field" type="text"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">باری دارایی</label>
+        <select id="medit-financialStatus" class="field">
+          <option value="">—</option>
+          <option value="باش">باش</option>
+          <option value="خراپ">خراپ</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">گەڕەک</label>
+        <input id="medit-neighborhood" class="field" type="text"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">نزیکترین شوێن</label>
+        <input id="medit-landmark" class="field" type="text"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">ئاستی خوێندن</label>
+        <input id="medit-educationLevel" class="field" type="text"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">ئاستیی قوتابی</label>
+        <select id="medit-studentLevel" class="field">
+          <option value="">— هەڵبژێرە —</option>
+          <option value="باش">باش</option>
+          <option value="تەواو باش">تەواو باش</option>
+          <option value="مامناوەند">مامناوەند</option>
+          <option value="کەم">کەم</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">نەخۆشی</label>
+        <select id="medit-illness" class="field" onchange="document.getElementById('medit-illnessDetail').classList.toggle('hidden', this.value!=='هەیەتی')">
+          <option value="نیەتی">نیەتی</option>
+          <option value="هەیەتی">هەیەتی</option>
+        </select>
+      </div>
+    </div>
+    <div id="medit-illnessDetail-row">
+      <label class="block text-xs text-muted mb-1">وردەکاری نەخۆشی</label>
+      <input id="medit-illnessDetail" class="field hidden" type="text"/>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div>
+        <label class="block text-xs text-muted mb-1">مامۆستای قورئان</label>
+        <select id="medit-teacherQuran" class="field"></select>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">مامۆستای پەروەردە</label>
+        <select id="medit-teacherEducation" class="field"></select>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">مامۆستای تجوید</label>
+        <select id="medit-teacherTajweed" class="field"></select>
+      </div>
+    </div>
+    <div>
+      <label class="block text-xs text-muted mb-1">تێبینی</label>
+      <textarea id="medit-notes" class="field" rows="2"></textarea>
+    </div>
+    <p id="medit-err" class="text-danger text-xs hidden"></p>
+    <button class="btn-primary w-full" onclick="submitEditStudent()">پاشەکەوتکردن</button>
   </div>
 </div>
 
