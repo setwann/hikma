@@ -1313,9 +1313,7 @@ document.addEventListener('keydown', e => {
 //  قوتابییەکانم
 // ══════════════════════════════════════════════
 function renderMyStudents() {
-  const myEntries = (_profile && _profile.fullName !== ADMIN_NAME)
-    ? (_profile.students || [])
-    : DB.students.map(s => ({ fullName: s.fullName, subject: '' }));
+  const myEntries = _profile ? (_profile.students || []) : [];
 
   const tbody = document.getElementById('t-mylist-body');
   const empty = document.getElementById('t-mylist-empty');
