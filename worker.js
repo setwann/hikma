@@ -116,8 +116,13 @@ export default {
           students: (t.students || []).filter(s => s.fullName !== fullName),
         }));
 
+        // لە لیستی ڕەشیشەوە دەسڕێتەوە
+        const blacklist = (await getKV(env, "blacklist")) || [];
+        const updatedBlacklist = blacklist.filter(b => b.studentName !== fullName);
+
         await putKV(env, "students", students);
         await putKV(env, "teachers", updatedTeachers);
+        await putKV(env, "blacklist", updatedBlacklist);
         return json({ ok: true });
       }
 
@@ -245,6 +250,24 @@ export default {
             ...(teachers[toIdx].students || []),
             { fullName: studentName, subject: entry.subject || "", acceptedAt: new Date().toISOString() },
           ];
+        }
+
+        // نوێکردنەوەی مامۆستاکانی قوتابی لە داتای students
+        const students = (await getKV(env, "students")) || [];
+        const sIdx = students.findIndex(s => s.fullName === studentName);
+        if (sIdx !== -1) {
+          const subj = norm(entry.subject);
+          // مامۆستای تایبەتی subject نوێ بکەوە
+          if (subj === "quran")   students[sIdx].teacherQuran     = toTeacher;
+          else if (subj === "tajweed") students[sIdx].teacherTajweed = toTeacher;
+          else if (subj === "edu")     students[sIdx].teacherEducation = toTeacher;
+          else {
+            // subject نیشانەکراو: هەر فیلدێک کە مامۆستای کۆن هەبوو نوێ بکەوە
+            if ((students[sIdx].teacherQuran     || "") === fromTeacher) students[sIdx].teacherQuran     = toTeacher;
+            if ((students[sIdx].teacherEducation || "") === fromTeacher) students[sIdx].teacherEducation = toTeacher;
+            if ((students[sIdx].teacherTajweed   || "") === fromTeacher) students[sIdx].teacherTajweed   = toTeacher;
+          }
+          await putKV(env, "students", students);
         }
 
         await putKV(env, "teachers", teachers);
