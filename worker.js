@@ -180,7 +180,7 @@ export default {
 
       // ── POST /api/accept ── قبووڵکردنی قوتابی لە لایەن مامۆستا
       if (method === "POST" && path === "/api/accept") {
-        const { teacherName, studentName } = await request.json();
+        const { teacherName, studentName, subject } = await request.json();
         if (!teacherName || !studentName)
           return json({ error: "زانیاری ناتەواو" }, 400);
 
@@ -188,13 +188,53 @@ export default {
         const idx = teachers.findIndex(t => t.fullName === teacherName);
         if (idx === -1) return json({ error: "مامۆستا نەدۆزرایەوە" }, 404);
 
-        const already = (teachers[idx].students || []).some(s => s.fullName === studentName);
-        if (already) return json({ error: "قوتابی پێشتر قبووڵکراوە" }, 409);
+        // هەمان قوتابی + هەمان بەش: نادرێت دووبارە بکرێت
+        const already = (teachers[idx].students || []).some(
+          s => s.fullName === studentName && s.subject === (subject || "")
+        );
+        if (already) return json({ error: "قوتابی پێشتر بۆ ئەم بەشە قبووڵکراوە" }, 409);
 
         teachers[idx].students = [
           ...(teachers[idx].students || []),
-          { fullName: studentName, acceptedAt: new Date().toISOString() },
+          { fullName: studentName, subject: subject || "", acceptedAt: new Date().toISOString() },
         ];
+
+        await putKV(env, "teachers", teachers);
+        return json({ ok: true });
+      }
+
+      // ── POST /api/transfer ── گواستنەوەی قوتابی بۆ مامۆستایەکی تر
+      if (method === "POST" && path === "/api/transfer") {
+        const { fromTeacher, toTeacher, studentName, subject } = await request.json();
+        if (!fromTeacher || !toTeacher || !studentName)
+          return json({ error: "زانیاری ناتەواو" }, 400);
+
+        const teachers = (await getKV(env, "teachers")) || [];
+        const fromIdx = teachers.findIndex(t => t.fullName === fromTeacher);
+        const toIdx   = teachers.findIndex(t => t.fullName === toTeacher);
+        if (fromIdx === -1) return json({ error: "مامۆستای کۆن نەدۆزرایەوە" }, 404);
+        if (toIdx   === -1) return json({ error: "مامۆستای نوێ نەدۆزرایەوە" }, 404);
+
+        // لە کۆن بسڕەوە
+        const entry = (teachers[fromIdx].students || []).find(
+          s => s.fullName === studentName && s.subject === (subject || "")
+        );
+        if (!entry) return json({ error: "قوتابی لای ئەم مامۆستایە نەدۆزرایەوە" }, 404);
+
+        teachers[fromIdx].students = (teachers[fromIdx].students || []).filter(
+          s => !(s.fullName === studentName && s.subject === (subject || ""))
+        );
+
+        // بۆ نوێ زیاد بکە
+        const alreadyAt = (teachers[toIdx].students || []).some(
+          s => s.fullName === studentName && s.subject === (subject || "")
+        );
+        if (!alreadyAt) {
+          teachers[toIdx].students = [
+            ...(teachers[toIdx].students || []),
+            { fullName: studentName, subject: subject || "", acceptedAt: new Date().toISOString() },
+          ];
+        }
 
         await putKV(env, "teachers", teachers);
         return json({ ok: true });
