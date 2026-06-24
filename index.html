@@ -594,9 +594,23 @@ async function apiCall(endpoint, method='GET', body=null) {
 const DB = { students: [], teachers: [], blacklist: [] };
 
 async function loadDB() {
-  const data = await apiCall('/api/data');
+  let data = await apiCall('/api/data');
   DB.teachers = data.teachers || [];
-  DB.students  = data.students || [];
+  DB.students  = data.students  || [];
+
+  // ئەگەر KV بەتاڵ بوو، ئەرشیف لە GitHub بخوێنەوە و گەڕاندنەوە بکە
+  if (DB.students.length === 0 && DB.teachers.length === 0) {
+    try {
+      const restoreRes = await apiCall('/api/restore', 'POST');
+      if (restoreRes.ok) {
+        data = await apiCall('/api/data');
+        DB.teachers = data.teachers || [];
+        DB.students  = data.students  || [];
+        toast('داتا لە ئەرشیفەوە گەڕاندرایەوە ✓');
+      }
+    } catch(e) { /* ئەرشیف نەبوو یان هەڵە — بەتاڵ دەمێنێتەوە */ }
+  }
+
   try {
     const blData = await apiCall('/api/blacklist');
     DB.blacklist = blData.blacklist || [];
@@ -606,55 +620,9 @@ async function loadDB() {
     badge.textContent = DB.blacklist.length;
     badge.classList.toggle('hidden', DB.blacklist.length === 0);
   }
-  checkAutoBlacklist();
 }
 
-// ── چاودێری ئۆتۆماتیکی غیاب (دوو مانگ = ٨ هەفتە پشت سەر هەو) ──
-async function checkAutoBlacklist() {
-  const now = new Date();
-  for (const s of DB.students) {
-    if (DB.blacklist.some(b => b.studentName === s.fullName)) continue;
-    const att = (s.attendance || []).sort((a, b) => a.date.localeCompare(b.date));
-    // دووبارە غیابی ٨ هەفتەی پشت سەر هەو بدۆزەرەوە
-    let streak = 0;
-    let lastDate = null;
-    for (const a of att) {
-      if (a.status === 'absent') {
-        if (!lastDate) {
-          streak = 1;
-          lastDate = new Date(a.date);
-        } else {
-          const diff = (new Date(a.date) - lastDate) / (1000*60*60*24);
-          if (diff <= 60) { // دوو مانگ
-            streak++;
-            lastDate = new Date(a.date);
-          } else {
-            streak = 1;
-            lastDate = new Date(a.date);
-          }
-        }
-        if (streak >= 8) {
-          // ئۆتۆماتیک زیادبکە
-          try {
-            await apiCall('/api/blacklist', 'POST', {
-              studentName: s.fullName,
-              reason: 'ئۆتۆماتیک: دوو مانگ غیابی پشت سەر هەو',
-              addedBy: 'سیستەم',
-            });
-            DB.blacklist.push({ studentName: s.fullName, reason: 'ئۆتۆماتیک: دوو مانگ غیابی پشت سەر هەو', addedBy: 'سیستەم', addedAt: new Date().toISOString() });
-            const badge = document.getElementById('blacklist-badge-count');
-            if (badge) { badge.textContent = DB.blacklist.length; badge.classList.remove('hidden'); }
-            toast(`${s.fullName} بە ئۆتۆماتیک بۆ لیستی ڕەش نەقڵکرا`, true);
-          } catch(e) {}
-          break;
-        }
-      } else {
-        streak = 0;
-        lastDate = null;
-      }
-    }
-  }
-}
+
 
 function isBlacklisted(name) {
   return DB.blacklist.some(b => b.studentName === name);
