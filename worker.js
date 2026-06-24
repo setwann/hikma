@@ -240,6 +240,46 @@ export default {
         return json({ ok: true });
       }
 
+      // ── GET /api/blacklist ── هەموو لیستی ڕەش
+      if (method === "GET" && path === "/api/blacklist") {
+        const blacklist = (await getKV(env, "blacklist")) || [];
+        return json({ blacklist });
+      }
+
+      // ── POST /api/blacklist ── زیادکردنی قوتابی بۆ لیستی ڕەش
+      if (method === "POST" && path === "/api/blacklist") {
+        const { studentName, reason, addedBy } = await request.json();
+        if (!studentName) return json({ error: "ناوی قوتابی پێویستە" }, 400);
+
+        const blacklist = (await getKV(env, "blacklist")) || [];
+        if (blacklist.some(b => b.studentName === studentName))
+          return json({ error: "قوتابی پێشتر لە لیستی ڕەشدایە" }, 409);
+
+        blacklist.push({
+          studentName,
+          reason: reason || "",
+          addedBy: addedBy || "",
+          addedAt: new Date().toISOString(),
+        });
+        await putKV(env, "blacklist", blacklist);
+        return json({ ok: true });
+      }
+
+      // ── DELETE /api/blacklist ── دەرهێنانی قوتابی لە لیستی ڕەش
+      if (method === "DELETE" && path === "/api/blacklist") {
+        const { studentName } = await request.json();
+        if (!studentName) return json({ error: "ناوی قوتابی پێویستە" }, 400);
+
+        let blacklist = (await getKV(env, "blacklist")) || [];
+        const before = blacklist.length;
+        blacklist = blacklist.filter(b => b.studentName !== studentName);
+        if (blacklist.length === before)
+          return json({ error: "قوتابی لە لیستی ڕەش نەدۆزرایەوە" }, 404);
+
+        await putKV(env, "blacklist", blacklist);
+        return json({ ok: true });
+      }
+
       // ── POST /api/seed ── بارکردنی داتای سەرەتایی (تەنها یەک جار)
       if (method === "POST" && path === "/api/seed") {
         const body = await request.json();
