@@ -251,7 +251,10 @@
     <div id="t-home" class="view active">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="card p-5">
-          <div class="sh"><span class="text-gold text-sm font-semibold">زانیارییە کەسییەکان</span></div>
+          <div class="sh flex items-center justify-between">
+            <span class="text-gold text-sm font-semibold">زانیارییە کەسییەکان</span>
+            <button class="btn-ghost text-xs" onclick="openEditTeacherModal()">✏️ دەستکاری</button>
+          </div>
           <div id="t-profile-rows" class="space-y-2.5 text-sm"></div>
         </div>
         <div class="card p-5">
@@ -867,10 +870,9 @@ function renderTeacher(p) {
   if (subjects.length) {
     ijazaHTML += `<p class="text-muted text-xs mb-2">بابەتە وانەکانی:</p><div class="space-y-1.5">`;
     subjects.forEach(sub => {
-      const label = subjectNames[sub] || sub;
-      const stageKey = sub === 'tajweed' ? 'tajweedStage' : sub === 'edu' ? 'eduStage' : null;
-      const stage = stageKey && p[stageKey] ? ` — قۆناغی ${p[stageKey]}` : '';
-      ijazaHTML += `<div class="flex items-center gap-2"><span class="text-xs bg-gold/10 text-goldlt border border-gold/20 px-2 py-1 rounded">📖 ${label}${stage}</span></div>`;
+      const subName = (typeof sub === 'object') ? (sub.name || '') : sub;
+      const stage   = (typeof sub === 'object' && sub.stage) ? ` — قۆناغی ${sub.stage}` : '';
+      ijazaHTML += `<div class="flex items-center gap-2"><span class="text-xs bg-gold/10 text-goldlt border border-gold/20 px-2 py-1 rounded">📖 ${subName}${stage}</span></div>`;
     });
     ijazaHTML += `</div>`;
   } else {
@@ -1105,8 +1107,15 @@ function renderAllStudents() {
   const ownerMap = {};
   DB.teachers.forEach(t => (t.students||[]).forEach(s => { ownerMap[s.fullName] = t.fullName; }));
 
+  const myStudentNames = (!isAdmin && _profile)
+    ? new Set((_profile.students || []).map(s => s.fullName))
+    : null;
+
   const list = DB.students
-    .filter(s => !search || s.fullName.includes(search) || s.fullName.toLowerCase().includes(search))
+    .filter(s => {
+      if (myStudentNames && !myStudentNames.has(s.fullName)) return false;
+      return !search || s.fullName.includes(search) || s.fullName.toLowerCase().includes(search);
+    })
     .sort((a,b) => a.fullName.localeCompare(b.fullName, 'ar'));
 
   empty.classList.toggle('hidden', list.length > 0);
@@ -1692,11 +1701,102 @@ async function submitRemoveBlacklist() {
   }
 }
 
+// ══════════════════════════════════════════════
+//  دەستکاری پرۆفایلی مامۆستا
+// ══════════════════════════════════════════════
+function openEditTeacherModal() {
+  if (!_profile) return;
+  const p = _profile;
+  document.getElementById('ete-name').value    = p.fullName || '';
+  document.getElementById('ete-phone').value   = p.phone    || '';
+  document.getElementById('ete-address').value = p.address  || '';
+  document.getElementById('ete-job').value     = p.job      || '';
+
+  // موجاز
+  const ijazaVal = p.ijaza === 'بەڵێ' ? 'بەڵێ' : 'نەخێر';
+  document.querySelectorAll('input[name="ete-ijaza"]').forEach(r => { r.checked = r.value === ijazaVal; });
+  const detailEl = document.getElementById('ete-ijaza-detail');
+  detailEl.value = p.ijazaDetail || '';
+  detailEl.classList.toggle('hidden', ijazaVal !== 'بەڵێ');
+  document.querySelectorAll('input[name="ete-ijaza"]').forEach(r => {
+    r.onchange = () => {
+      const show = document.querySelector('input[name="ete-ijaza"]:checked')?.value === 'بەڵێ';
+      detailEl.classList.toggle('hidden', !show);
+    };
+  });
+
+  // بابەتەکان
+  const subs = (p.subjects || []).map(s => (typeof s === 'object') ? s.name : s);
+  const stages = {};
+  (p.subjects || []).forEach(s => { if (typeof s === 'object' && s.stage) stages[s.name] = s.stage; });
+
+  const quranCk = document.getElementById('ete-quran');
+  const tajweedCk = document.getElementById('ete-tajweed');
+  const eduCk = document.getElementById('ete-edu');
+  const tajweedSt = document.getElementById('ete-tajweed-stage');
+  const eduSt = document.getElementById('ete-edu-stage');
+
+  quranCk.checked   = subs.includes('قورئان');
+  tajweedCk.checked = subs.includes('تجوید');
+  eduCk.checked     = subs.includes('پەروەردە');
+  tajweedSt.value = stages['تجوید'] || '';
+  eduSt.value     = stages['پەروەردە'] || '';
+  tajweedSt.classList.toggle('hidden', !tajweedCk.checked);
+  eduSt.classList.toggle('hidden', !eduCk.checked);
+
+  tajweedCk.onchange = () => tajweedSt.classList.toggle('hidden', !tajweedCk.checked);
+  eduCk.onchange     = () => eduSt.classList.toggle('hidden', !eduCk.checked);
+
+  document.getElementById('ete-err').classList.add('hidden');
+  document.getElementById('modal-edit-teacher').classList.remove('hidden');
+}
+
+async function saveEditTeacher() {
+  const errEl = document.getElementById('ete-err');
+  errEl.classList.add('hidden');
+
+  const name  = document.getElementById('ete-name').value.trim();
+  const phone = document.getElementById('ete-phone').value.trim();
+  if (!name)  { errEl.textContent = 'ناوی تەواو پێویستە.'; errEl.classList.remove('hidden'); return; }
+  if (!phone) { errEl.textContent = 'تەلەفۆن پێویستە.'; errEl.classList.remove('hidden'); return; }
+
+  const ijaza = document.querySelector('input[name="ete-ijaza"]:checked')?.value || 'نەخێر';
+  const ijazaDetail = ijaza === 'بەڵێ' ? document.getElementById('ete-ijaza-detail').value.trim() : '';
+
+  const subjects = [];
+  if (document.getElementById('ete-quran').checked)
+    subjects.push({ name: 'قورئان' });
+  if (document.getElementById('ete-tajweed').checked)
+    subjects.push({ name: 'تجوید', stage: document.getElementById('ete-tajweed-stage').value.trim() });
+  if (document.getElementById('ete-edu').checked)
+    subjects.push({ name: 'پەروەردە', stage: document.getElementById('ete-edu-stage').value.trim() });
+
+  const payload = {
+    fullName: _profile.fullName, // کلیلی ناوه‌ نییگۆڕێت بۆ دۆزینەوە
+    phone, address: document.getElementById('ete-address').value.trim(),
+    job: document.getElementById('ete-job').value.trim(),
+    ijaza, ijazaDetail, subjects,
+  };
+
+  try {
+    await apiCall('/api/teacher', 'PUT', payload);
+    await loadDB();
+    // نوێکردنەوەی _profile
+    _profile = DB.teachers.find(t => t.fullName === _profile.fullName) || _profile;
+    showTeacherPage(_profile);
+    closeModal('modal-edit-teacher');
+    toast('پرۆفایل نوێکرایەوە ✓');
+  } catch(e) {
+    errEl.textContent = 'هەڵە: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
 function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
 }
 // کلیکی دەرەوەی مۆدال داخستنی
-['modal-att','modal-lessons','modal-accept','modal-transfer','modal-edit','modal-blacklist-add','modal-blacklist-remove'].forEach(id => {
+['modal-att','modal-lessons','modal-accept','modal-transfer','modal-edit','modal-blacklist-add','modal-blacklist-remove','modal-edit-teacher'].forEach(id => {
   document.getElementById(id)?.addEventListener('click', e => {
     if (e.target.id === id) closeModal(id);
   });
@@ -1915,6 +2015,59 @@ function closeModal(id) {
     <div class="flex gap-2">
       <button class="btn-success flex-1" onclick="submitRemoveBlacklist()">✓ دەرهێنانەوە</button>
       <button class="btn-ghost" onclick="closeModal('modal-blacklist-remove')">هەڵوەشاندنەوە</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal: دەستکاری پرۆفایلی مامۆستا -->
+<div id="modal-edit-teacher" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.65);overflow-y:auto">
+  <div class="card p-5 w-full max-w-md space-y-4" style="max-height:90vh;overflow-y:auto">
+    <div class="flex justify-between items-center sh">
+      <span class="text-gold font-semibold text-sm">دەستکاری پرۆفایل</span>
+      <button class="text-muted hover:text-cream text-lg leading-none" onclick="closeModal('modal-edit-teacher')">✕</button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs text-muted mb-1.5">ناوی تەواو <span class="text-danger">*</span></label>
+        <input id="ete-name" class="field" type="text" placeholder="ناوی تەواو"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1.5">تەلەفۆن <span class="text-danger">*</span></label>
+        <input id="ete-phone" class="field" type="text" dir="ltr" placeholder="07701234567"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1.5">ناونیشان</label>
+        <input id="ete-address" class="field" type="text" placeholder="ناونیشان"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1.5">پیشە</label>
+        <input id="ete-job" class="field" type="text" placeholder="پیشە"/>
+      </div>
+    </div>
+    <div>
+      <label class="block text-xs text-muted mb-2">موجاز هەیە؟</label>
+      <div class="flex gap-4">
+        <label class="flex items-center gap-1.5 text-sm cursor-pointer"><input type="radio" name="ete-ijaza" value="بەڵێ" class="accent-gold"/> بەڵێ</label>
+        <label class="flex items-center gap-1.5 text-sm cursor-pointer"><input type="radio" name="ete-ijaza" value="نەخێر" class="accent-gold" checked/> نەخێر</label>
+      </div>
+      <input id="ete-ijaza-detail" class="field hidden mt-2" type="text" placeholder="بەرامبەر موجاز..."/>
+    </div>
+    <div>
+      <label class="block text-xs text-muted mb-2">بابەتە وانەکان</label>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="ete-quran" class="accent-gold"/> قورئان</label>
+        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="ete-tajweed" class="accent-gold"/> تجوید
+          <input id="ete-tajweed-stage" class="field hidden" style="max-width:140px" type="text" placeholder="قۆناغ..."/>
+        </label>
+        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="ete-edu" class="accent-gold"/> پەروەردە
+          <input id="ete-edu-stage" class="field hidden" style="max-width:140px" type="text" placeholder="قۆناغ..."/>
+        </label>
+      </div>
+    </div>
+    <p id="ete-err" class="text-danger text-xs hidden"></p>
+    <div class="flex gap-2 justify-end">
+      <button class="btn-ghost" onclick="closeModal('modal-edit-teacher')">هەڵوەشاندنەوە</button>
+      <button class="btn-ok" onclick="saveEditTeacher()">پاشەکەوتکردن ✓</button>
     </div>
   </div>
 </div>
