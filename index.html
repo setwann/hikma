@@ -1089,6 +1089,7 @@ async function submitAccept() {
     renderAllStudents();
     renderMyStudents();
     closeModal('modal-accept');
+    tTab('t-mylist');
     toast(`${_acceptName} سەحکرا ✓`);
   } catch(e) {
     errEl.textContent = 'هەڵە: ' + e.message;
@@ -1300,6 +1301,7 @@ function tTab(id) {
   document.querySelectorAll('#page-teacher .view').forEach(v => v.classList.toggle('active', v.id === id));
   if (id === 't-add') populateTeacherSelects(['add-teacherQuran','add-teacherEducation','add-teacherTajweed']);
   if (id === 't-list') renderAllStudents();
+  if (id === 't-mylist') renderMyStudents();
   if (id === 't-blacklist') renderBlacklist();
 }
 
