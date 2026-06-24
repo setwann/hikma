@@ -6,4 +6,6 @@ compatibility_date = "2024-01-01"
 binding = "HIKMA_KV"
 id = "1979fce9da70493ebea8f28effd91271"
 
-# GH_TOKEN تەواوی لادراوە — داتا ئێستا تەنها لە KV دەمێنێتەوە
+# ئەرشیفی هەفتانە — هەر یەکشەممە کاتژمێر ٢٢:٠٠ UTC (= ٠١:٠٠ کاتی عێراق)
+[triggers]
+crons = ["0 22 * * 0"]
