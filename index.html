@@ -1107,6 +1107,8 @@ function renderAllStudents() {
   const ownerMap = {};
   DB.teachers.forEach(t => (t.students||[]).forEach(s => { ownerMap[s.fullName] = t.fullName; }));
 
+  const isAdmin = _profile && _profile.fullName === ADMIN_NAME;
+
   const myStudentNames = (!isAdmin && _profile)
     ? new Set((_profile.students || []).map(s => s.fullName))
     : null;
@@ -1119,7 +1121,6 @@ function renderAllStudents() {
     .sort((a,b) => a.fullName.localeCompare(b.fullName, 'ar'));
 
   empty.classList.toggle('hidden', list.length > 0);
-  const isAdmin = _profile && _profile.fullName === ADMIN_NAME;
 
   tbody.innerHTML = list.map(s => {
     const owner = ownerMap[s.fullName];
