@@ -134,10 +134,34 @@ export default {
 
     try {
 
-      // ── GET /api/data ── هەموو داتا (KV)
+      // ── GET /api/data ── هەموو داتا (KV + GitHub)
       if (method === "GET" && path === "/api/data") {
-        const teachers = (await getKV(env, "teachers")) || [];
-        const students  = (await getKV(env, "students"))  || [];
+        const kvStudents = (await getKV(env, "students")) || [];
+        const kvTeachers = (await getKV(env, "teachers")) || [];
+
+        // هەردووکی بخوێنەوە و یەکیان بکەوە
+        let ghStudents = [];
+        let ghTeachers = [];
+        try {
+          const archive = await readArchiveFromGH(env);
+          if (archive) {
+            ghStudents = archive.students  || [];
+            ghTeachers = archive.teachers  || [];
+          }
+        } catch (_) {
+          // ئەگەر GitHub نەگەیشت، KV بەتەنها بەکاردێت
+        }
+
+        // یەکخستن: KV سەرەکییە، GitHub تەنها زیادی دەکات ئەگەر ناو تەکرار نەبێت
+        const mergeByName = (kvArr, ghArr) => {
+          const names = new Set(kvArr.map(x => x.fullName));
+          const extra = ghArr.filter(x => !names.has(x.fullName));
+          return [...kvArr, ...extra];
+        };
+
+        const students = mergeByName(kvStudents, ghStudents);
+        const teachers = mergeByName(kvTeachers, ghTeachers);
+
         return json({ teachers, students });
       }
 
