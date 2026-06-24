@@ -190,7 +190,7 @@ export default {
 
         // هەمان قوتابی + هەمان بەش: نادرێت دووبارە بکرێت
         const already = (teachers[idx].students || []).some(
-          s => s.fullName === studentName && s.subject === (subject || "")
+          s => s.fullName === studentName && ((s.subject||"") === (subject||""))
         );
         if (already) return json({ error: "قوتابی پێشتر بۆ ئەم بەشە قبووڵکراوە" }, 409);
 
@@ -217,17 +217,17 @@ export default {
 
         // لە کۆن بسڕەوە
         const entry = (teachers[fromIdx].students || []).find(
-          s => s.fullName === studentName && s.subject === (subject || "")
+          s => s.fullName === studentName && ((s.subject||"") === (subject||""))
         );
         if (!entry) return json({ error: "قوتابی لای ئەم مامۆستایە نەدۆزرایەوە" }, 404);
 
         teachers[fromIdx].students = (teachers[fromIdx].students || []).filter(
-          s => !(s.fullName === studentName && s.subject === (subject || ""))
+          s => !(s.fullName === studentName && ((s.subject||"") === (subject||"")))
         );
 
         // بۆ نوێ زیاد بکە
         const alreadyAt = (teachers[toIdx].students || []).some(
-          s => s.fullName === studentName && s.subject === (subject || "")
+          s => s.fullName === studentName && ((s.subject||"") === (subject||""))
         );
         if (!alreadyAt) {
           teachers[toIdx].students = [
