@@ -101,6 +101,16 @@
       font-size:.85rem;outline:none}
     .verify-input:focus{border-color:#C9A84C}
     .verify-input::placeholder{color:#8892A4}
+    .day-btn{padding:.35rem .3rem;border-radius:.35rem;font-size:.75rem;font-family:'Noto Sans Arabic',sans-serif;
+      background:rgba(255,255,255,.06);color:#8892A4;border:1px solid transparent;cursor:pointer;transition:all .15s}
+    .day-btn.active{background:rgba(201,168,76,.18);color:#E8C97A;border-color:#C9A84C55}
+    .day-btn:hover:not(.active){background:rgba(255,255,255,.1);color:#F5F0E8}
+    .att-status-btn{padding:.45rem;border-radius:.4rem;font-size:.8rem;font-family:'Noto Sans Arabic',sans-serif;
+      background:rgba(255,255,255,.06);color:#8892A4;border:1px solid transparent;cursor:pointer;transition:all .15s}
+    .att-status-btn.active{border-color:#C9A84C55;color:#E8C97A}
+    .att-status-btn[data-s="present"].active{background:rgba(74,222,128,.12);color:#4ade80}
+    .att-status-btn[data-s="absent"].active{background:rgba(248,113,113,.12);color:#f87171}
+    .att-status-btn[data-s="late"].active{background:rgba(251,191,36,.12);color:#fbbf24}
   </style>
 </head>
 <body>
@@ -216,6 +226,7 @@
         <button class="nav-tab active" onclick="tTab('t-home')" data-tab="t-home">پرۆفایل</button>
         <button class="nav-tab" onclick="tTab('t-add')" data-tab="t-add">زیادکردنی قوتابی</button>
         <button class="nav-tab" onclick="tTab('t-list')" data-tab="t-list">هەموو قوتابییەکان</button>
+        <button class="nav-tab" onclick="tTab('t-mylist')" data-tab="t-mylist" id="t-mylist-tab">قوتابییەکانم</button>
         <button class="nav-tab hidden" data-tab="t-add-teacher" id="t-add-teacher-tab" onclick="tTab('t-add-teacher')">زیادکردنی مامۆستا</button>
         <button class="nav-tab hidden" data-tab="t-detail" id="t-detail-tab">تەفسیل</button>
       </div>
@@ -397,6 +408,20 @@
           </table>
         </div>
         <p id="t-list-empty" class="hidden text-center text-muted py-8 text-sm">هیچ قوتابیێک نەدۆزرایەوە.</p>
+      </div>
+    </div>
+
+    <!-- قوتابییەکانم -->
+    <div id="t-mylist" class="view">
+      <div class="card p-5">
+        <div class="sh mb-4"><span class="text-gold font-semibold">قوتابییەکانم</span></div>
+        <div class="sx">
+          <table class="tbl">
+            <thead><tr><th>ناوی قوتابی</th><th>غیابات</th><th>درسەکان</th></tr></thead>
+            <tbody id="t-mylist-body"></tbody>
+          </table>
+        </div>
+        <p id="t-mylist-empty" class="hidden text-center text-muted py-8 text-sm">هیچ قوتابیێک قبووڵ نەکراوە هەتا ئێستا.</p>
       </div>
     </div>
 
@@ -731,6 +756,7 @@ function renderTeacher(p) {
     (p.subjects||[]).map(s => `<span class="text-xs bg-gold/10 text-goldlt px-2 py-0.5 rounded">${s}</span>`).join('') || '<span class="text-muted text-sm">—</span>';
 
   renderAllStudents();
+  renderMyStudents();
   tTab('t-home');
 }
 
@@ -1066,6 +1092,7 @@ function buildDetailHTML(p) {
           ${row('مامۆستای تجوید', p.teacherTajweed)}
         </div>
         ${p.notes ? `<div class="mt-3 p-3 rounded bg-white/5 text-xs text-cream"><span class="text-muted block mb-1">تێبینی</span>${p.notes}</div>` : ''}
+        ${p.lastLesson ? `<div class="mt-3 p-3 rounded bg-white/5 text-xs space-y-1"><span class="text-muted block mb-1.5 font-semibold">دوایین درس</span>${p.lastLesson.quran?`<div><span class="text-muted">قورئان: </span>${p.lastLesson.quran}</div>`:''}${p.lastLesson.tajweed?`<div><span class="text-muted">تجوید: </span>${p.lastLesson.tajweed}</div>`:''}${p.lastLesson.edu?`<div><span class="text-muted">پەروەردە: </span>${p.lastLesson.edu}</div>`:''}</div>` : ''}
       </div>
 
     </div>
@@ -1102,6 +1129,236 @@ function tTab(id) {
 document.addEventListener('keydown', e => {
   if(e.key === 'Enter' && !document.getElementById('page-login').classList.contains('hidden')) doLogin();
 });
+
+// ══════════════════════════════════════════════
+//  قوتابییەکانم
+// ══════════════════════════════════════════════
+function renderMyStudents() {
+  const myStudents = (_profile && _profile.fullName !== ADMIN_NAME)
+    ? (_profile.students || []).map(s => s.fullName)
+    : DB.students.map(s => s.fullName);
+
+  const tbody = document.getElementById('t-mylist-body');
+  const empty = document.getElementById('t-mylist-empty');
+
+  if (!myStudents.length) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = myStudents.map(name => {
+    const s = findStudent(name);
+    if (!s) return '';
+    const ac = attCounts(s.attendance || []);
+    return `<tr>
+      <td class="text-cream font-medium">${s.fullName}</td>
+      <td>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="flex items-center gap-1 text-xs"><span class="att att-p"></span>${ac.present}</span>
+          <span class="flex items-center gap-1 text-xs"><span class="att att-a"></span>${ac.absent}</span>
+          <span class="flex items-center gap-1 text-xs"><span class="att att-l"></span>${ac.late}</span>
+          <button class="btn-ghost text-xs" onclick="openAttModal('${esc(s.fullName)}')">+ تۆمار</button>
+        </div>
+      </td>
+      <td>
+        <button class="btn-ghost text-xs" onclick="openLessonsModal('${esc(s.fullName)}')">+ درس</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  مۆدالی غیابات
+// ══════════════════════════════════════════════
+let _attStudent = '';
+
+function openAttModal(name) {
+  _attStudent = name;
+  document.getElementById('matt-title').textContent = 'غیابات — ' + name;
+  // بەرواری ئەمرۆ
+  const today = new Date();
+  const iso = today.toISOString().slice(0,10);
+  document.getElementById('matt-date').value = iso;
+  // رۆژی هەفتەی ئەمرۆ دیاری بکە
+  const dayNames = ['یەکشەممە','دووشەممە','سێشەممە','چوارشەممە','پێنجشەممە','هەینی','شەممە'];
+  const todayDay = dayNames[today.getDay()];
+  document.querySelectorAll('.day-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.d === todayDay);
+  });
+  // دۆخ ڕیسێت
+  document.querySelectorAll('.att-status-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('matt-err').classList.add('hidden');
+  document.getElementById('modal-att').classList.remove('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.day-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.day-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+  document.querySelectorAll('.att-status-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.att-status-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+});
+
+async function submitAttendance() {
+  const errEl  = document.getElementById('matt-err');
+  errEl.classList.add('hidden');
+  const date   = document.getElementById('matt-date').value.trim();
+  const dayEl  = document.querySelector('.day-btn.active');
+  const statEl = document.querySelector('.att-status-btn.active');
+
+  if (!date)   { errEl.textContent = 'بەروار پێویستە'; errEl.classList.remove('hidden'); return; }
+  if (!statEl) { errEl.textContent = 'دۆخ دیاری بکە'; errEl.classList.remove('hidden'); return; }
+
+  const s = findStudent(_attStudent);
+  if (!s) return;
+
+  const entry = {
+    date,
+    day:    dayEl ? dayEl.dataset.d : '',
+    status: statEl.dataset.s,
+  };
+
+  const updated = { ...(s), attendance: [...(s.attendance||[]), entry] };
+  try {
+    await apiCall('/api/student', 'PUT', updated);
+    await loadDB();
+    _profile = findTeacher(_profile.fullName);
+    renderMyStudents();
+    closeModal('modal-att');
+    toast(`${_attStudent} — ${attLabel(entry.status)} ✓`);
+  } catch(e) {
+    errEl.textContent = 'هەڵە: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  مۆدالی درسەکان
+// ══════════════════════════════════════════════
+let _lesStudent = '';
+
+function openLessonsModal(name) {
+  _lesStudent = name;
+  document.getElementById('mles-title').textContent = 'درسەکان — ' + name;
+  const s = findStudent(name);
+  const last = (s && s.lastLesson) || {};
+  document.getElementById('mles-quran').value   = last.quran   || '';
+  document.getElementById('mles-tajweed').value  = last.tajweed || '';
+  document.getElementById('mles-edu').value      = last.edu     || '';
+  document.getElementById('mles-err').classList.add('hidden');
+  document.getElementById('modal-lessons').classList.remove('hidden');
+}
+
+async function submitLessons() {
+  const errEl = document.getElementById('mles-err');
+  errEl.classList.add('hidden');
+  const quran   = document.getElementById('mles-quran').value.trim();
+  const tajweed = document.getElementById('mles-tajweed').value.trim();
+  const edu     = document.getElementById('mles-edu').value.trim();
+
+  if (!quran && !tajweed && !edu) {
+    errEl.textContent = 'کەمتر لە یەک خانە پڕ بکەرەوە'; errEl.classList.remove('hidden'); return;
+  }
+
+  const s = findStudent(_lesStudent);
+  if (!s) return;
+
+  const updated = { ...s, lastLesson: { quran, tajweed, edu, savedAt: new Date().toISOString() } };
+  try {
+    await apiCall('/api/student', 'PUT', updated);
+    await loadDB();
+    _profile = findTeacher(_profile.fullName);
+    renderMyStudents();
+    closeModal('modal-lessons');
+    toast(`${_lesStudent} — درسەکان تۆمارکران ✓`);
+  } catch(e) {
+    errEl.textContent = 'هەڵە: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  یاریدەدەری مۆدال
+// ══════════════════════════════════════════════
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+// کلیکی دەرەوەی مۆدال داخستنی
+['modal-att','modal-lessons'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', e => {
+    if (e.target.id === id) closeModal(id);
+  });
+});
 </script>
+<!-- ══ مۆدالی غیابات ══ -->
+<div id="modal-att" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.65)">
+  <div class="card p-6 w-full max-w-sm space-y-4" style="max-height:90vh;overflow-y:auto">
+    <div class="flex items-center justify-between">
+      <h3 class="text-gold font-semibold" id="matt-title">غیابات</h3>
+      <button class="text-muted hover:text-cream text-lg leading-none" onclick="closeModal('modal-att')">✕</button>
+    </div>
+    <div>
+      <label class="block text-xs text-muted mb-1.5">بەروار <span class="text-danger">*</span></label>
+      <input id="matt-date" class="field" type="date"/>
+    </div>
+    <div>
+      <label class="block text-xs text-muted mb-2">رۆژی هەفتە</label>
+      <div class="grid grid-cols-4 gap-1.5" id="matt-days">
+        <button type="button" class="day-btn" data-d="شەممە">شەممە</button>
+        <button type="button" class="day-btn" data-d="یەکشەممە">یەکشەممە</button>
+        <button type="button" class="day-btn" data-d="دووشەممە">دووشەممە</button>
+        <button type="button" class="day-btn" data-d="سێشەممە">سێشەممە</button>
+        <button type="button" class="day-btn" data-d="چوارشەممە">چوارشەممە</button>
+        <button type="button" class="day-btn" data-d="پێنجشەممە">پێنجشەممە</button>
+        <button type="button" class="day-btn" data-d="هەینی">هەینی</button>
+      </div>
+    </div>
+    <div>
+      <label class="block text-xs text-muted mb-1.5">دۆخ <span class="text-danger">*</span></label>
+      <div class="flex gap-2">
+        <button type="button" class="att-status-btn flex-1" data-s="present">✓ حازر</button>
+        <button type="button" class="att-status-btn flex-1" data-s="absent">✗ غایب</button>
+        <button type="button" class="att-status-btn flex-1" data-s="late">⏱ دواکەوتوو</button>
+      </div>
+    </div>
+    <p id="matt-err" class="text-danger text-xs hidden"></p>
+    <button class="btn-primary w-full" onclick="submitAttendance()">تۆمارکردن</button>
+  </div>
+</div>
+
+<!-- ══ مۆدالی درسەکان ══ -->
+<div id="modal-lessons" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.65)">
+  <div class="card p-6 w-full max-w-sm space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="text-gold font-semibold" id="mles-title">درسەکان</h3>
+      <button class="text-muted hover:text-cream text-lg leading-none" onclick="closeModal('modal-lessons')">✕</button>
+    </div>
+    <p class="text-xs text-muted -mt-2">بابەت / ئایەت / سورەتی خوێندووی بنووسە</p>
+    <div>
+      <label class="block text-xs text-muted mb-1">قورئان</label>
+      <input id="mles-quran" class="field" type="text" placeholder="سورەتی بەقەرە، ئایەتی ١—٥"/>
+    </div>
+    <div>
+      <label class="block text-xs text-muted mb-1">تجوید</label>
+      <input id="mles-tajweed" class="field" type="text" placeholder="ئیدغام، مەخارجی تیف..."/>
+    </div>
+    <div>
+      <label class="block text-xs text-muted mb-1">پەروەردە</label>
+      <input id="mles-edu" class="field" type="text" placeholder="بابەتی ئەخلاق..."/>
+    </div>
+    <p id="mles-err" class="text-danger text-xs hidden"></p>
+    <button class="btn-primary w-full" onclick="submitLessons()">تۆمارکردن</button>
+  </div>
+</div>
+
 </body>
 </html>
