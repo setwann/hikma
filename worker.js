@@ -38,7 +38,7 @@ async function deleteKV(env, key) {
   await env.HIKMA_KV.delete(key);
 }
 
-// ── GitHub: دۆزینەوەی SHA ی فایلی ئێستا ──
+// ── GitHub: دۆزینەوەی SHA ی فایلی ئێسستا ──
 async function getGHFileSHA(env) {
   const res = await fetch(
     `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}`,
