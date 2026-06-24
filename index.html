@@ -249,16 +249,20 @@
 
     <!-- پرۆفایل -->
     <div id="t-home" class="view active">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="card p-5">
           <div class="sh"><span class="text-gold text-sm font-semibold">زانیارییە کەسییەکان</span></div>
           <div id="t-profile-rows" class="space-y-2.5 text-sm"></div>
         </div>
         <div class="card p-5">
-          <div class="sh"><span class="text-gold text-sm font-semibold">پۆل و بابەتەکان</span></div>
+          <div class="sh"><span class="text-gold text-sm font-semibold">موجاز و بابەتەکان</span></div>
+          <div id="t-ijaza-section" class="space-y-3 text-sm"></div>
+        </div>
+        <div class="card p-5">
+          <div class="sh"><span class="text-gold text-sm font-semibold">پۆل و قوتابییەکان</span></div>
           <div class="space-y-3">
             <div><p class="text-muted text-xs mb-1.5">پۆلە دیاریکراوەکان</p><div id="t-class-chips" class="flex flex-wrap gap-1.5"></div></div>
-            <div><p class="text-muted text-xs mb-1.5">بابەتەکان</p><div id="t-subject-chips" class="flex flex-wrap gap-1.5"></div></div>
+            <div id="t-mycount-row"></div>
           </div>
         </div>
       </div>
@@ -840,16 +844,47 @@ function renderTeacher(p) {
     adminTab.classList.add('hidden');
   }
 
+  // زانیارییە کەسییەکان
+  const profRow = (k,v) => `<div class="flex justify-between gap-2 py-1 border-b border-white/5"><span class="text-muted shrink-0 text-xs">${k}</span><span class="text-cream text-right text-xs">${v||'—'}</span></div>`;
   document.getElementById('t-profile-rows').innerHTML = [
-    ['ناوی تەواو', p.fullName || '—'],
+    ['ناوی تەواو', p.fullName],
     ['تەلەفۆن', `<span dir="ltr" class="font-mono">${p.phone||'—'}</span>`],
-    ['ئیمەیڵ', `<span dir="ltr" class="font-mono text-xs">${p.email||'—'}</span>`],
-  ].map(([k,v]) => `<div class="flex justify-between gap-2"><span class="text-muted shrink-0">${k}</span><span class="text-cream text-right">${v}</span></div>`).join('');
+    ['ناونیشان', p.address],
+    ['پیشە', p.job],
+  ].map(([k,v]) => profRow(k,v)).join('');
 
+  // موجاز و بابەتەکان
+  const subjectNames = { quran:'قورئان', tajweed:'تجوید', edu:'پەروەردە' };
+  const subjects = p.subjects || [];
+  let ijazaHTML = '';
+  // موجاز
+  if (p.ijaza === 'بەڵێ') {
+    ijazaHTML += `<div class="flex items-center gap-2 mb-3"><span class="text-xs bg-ok/20 text-green-400 border border-ok/40 px-2 py-0.5 rounded">✓ موجاز هەیە</span>${p.ijazaDetail ? `<span class="text-muted text-xs">${p.ijazaDetail}</span>` : ''}</div>`;
+  } else {
+    ijazaHTML += `<div class="mb-3"><span class="text-xs bg-white/5 text-muted border border-white/10 px-2 py-0.5 rounded">موجاز نیە</span></div>`;
+  }
+  // بابەتەکان
+  if (subjects.length) {
+    ijazaHTML += `<p class="text-muted text-xs mb-2">بابەتە وانەکانی:</p><div class="space-y-1.5">`;
+    subjects.forEach(sub => {
+      const label = subjectNames[sub] || sub;
+      const stageKey = sub === 'tajweed' ? 'tajweedStage' : sub === 'edu' ? 'eduStage' : null;
+      const stage = stageKey && p[stageKey] ? ` — قۆناغی ${p[stageKey]}` : '';
+      ijazaHTML += `<div class="flex items-center gap-2"><span class="text-xs bg-gold/10 text-goldlt border border-gold/20 px-2 py-1 rounded">📖 ${label}${stage}</span></div>`;
+    });
+    ijazaHTML += `</div>`;
+  } else {
+    ijazaHTML += `<p class="text-muted text-xs">هیچ بابەتێک دیاری نەکراوە.</p>`;
+  }
+  document.getElementById('t-ijaza-section').innerHTML = ijazaHTML;
+
+  // پۆل و ژمارەی قوتابی
   document.getElementById('t-class-chips').innerHTML =
     (p.assignedClasses||[]).map(c => `<span class="text-xs bg-mid/50 text-cream px-2 py-0.5 rounded">${c}</span>`).join('') || '<span class="text-muted text-sm">—</span>';
-  document.getElementById('t-subject-chips').innerHTML =
-    (p.subjects||[]).map(s => `<span class="text-xs bg-gold/10 text-goldlt px-2 py-0.5 rounded">${s}</span>`).join('') || '<span class="text-muted text-sm">—</span>';
+  const myCount = (p.students || []).length;
+  document.getElementById('t-mycount-row').innerHTML = myCount
+    ? `<div class="mt-2 p-2 rounded bg-gold/5 border border-gold/15 text-center"><span class="text-gold font-bold text-lg">${myCount}</span><span class="text-muted text-xs block">قوتابی قبووڵکراو</span></div>`
+    : '<p class="text-muted text-xs mt-2">هیچ قوتابیێک قبووڵ نەکراوە.</p>';
 
   renderAllStudents();
   renderMyStudents();
@@ -1556,7 +1591,10 @@ async function submitTransfer() {
     await loadDB();
     // نوێکردنەوەی profile لە داتای نوێ
     const freshProfile = findTeacher(_profile.fullName);
-    if (freshProfile) _profile = freshProfile;
+    if (freshProfile) {
+      _profile = freshProfile;
+      renderTeacher(_profile);  // پرۆفایل نوێ بکەوە (ژمارەی قوتابی)
+    }
     renderAllStudents();
     renderMyStudents();
     closeModal('modal-transfer');
