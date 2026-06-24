@@ -417,7 +417,7 @@
         <div class="sh mb-4"><span class="text-gold font-semibold">قوتابییەکانم</span></div>
         <div class="sx">
           <table class="tbl">
-            <thead><tr><th>ناوی قوتابی</th><th>غیابات</th><th>درسەکان</th></tr></thead>
+            <thead><tr><th>ناوی قوتابی</th><th>بەش</th><th>غیابات</th><th>درسەکان</th><th></th></tr></thead>
             <tbody id="t-mylist-body"></tbody>
           </table>
         </div>
@@ -932,30 +932,34 @@ async function submitAddTeacher() {
 }
 
 // ══════════════════════════════════════════════
-//  بازنەی سێتوان
+//  بازنەی سێتوان (مۆدالی نوێ + بەش)
 // ══════════════════════════════════════════════
-async function acceptStudent(studentName) {
-  const inputEl = document.getElementById('vrf-' + studentName);
-  const errEl   = document.getElementById('vrf-err-' + studentName);
-  const typed   = inputEl ? inputEl.value.trim() : '';
-  if (errEl) errEl.classList.add('hidden');
+let _acceptName = '';
 
-  if (typed !== studentName) {
-    if (errEl) { errEl.textContent = 'ناوەکە هەڵەیە. تکایە ناوی تەواوی قوتابی بنووسە.'; errEl.classList.remove('hidden'); }
-    return;
-  }
+function openAcceptModal(studentName) {
+  _acceptName = studentName;
+  document.getElementById('macc-title').textContent = 'سەحکردنی — ' + studentName;
+  document.getElementById('macc-subject').value = 'quran';
+  document.getElementById('macc-err').classList.add('hidden');
+  document.getElementById('modal-accept').classList.remove('hidden');
+}
 
-  if (inputEl) inputEl.disabled = true;
+async function submitAccept() {
+  const errEl   = document.getElementById('macc-err');
+  errEl.classList.add('hidden');
+  const subject = document.getElementById('macc-subject').value;
 
   try {
-    await apiCall('/api/accept', 'POST', { teacherName: _profile.fullName, studentName });
+    await apiCall('/api/accept', 'POST', { teacherName: _profile.fullName, studentName: _acceptName, subject });
     await loadDB();
     _profile = findTeacher(_profile.fullName);
     renderAllStudents();
-    toast(`${studentName} سەحکرا ✓`);
+    renderMyStudents();
+    closeModal('modal-accept');
+    toast(`${_acceptName} سەحکرا ✓`);
   } catch(e) {
-    if (errEl) { errEl.textContent = 'هەڵە: ' + e.message; errEl.classList.remove('hidden'); }
-    if (inputEl) inputEl.disabled = false;
+    errEl.textContent = 'هەڵە: ' + e.message;
+    errEl.classList.remove('hidden');
   }
 }
 
@@ -994,9 +998,7 @@ function renderAllStudents() {
       ? `<td>${isMyStudent ? `<button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>` : ''}</td>`
       : `<td>
            <div class="flex items-center gap-2">
-             <input class="verify-input" id="vrf-${esc(s.fullName)}" type="text"
-               placeholder="ناو بنووسە بۆ سەح..." autocomplete="off" style="width:160px"/>
-             <button class="btn-ok text-xs" onclick="acceptStudent('${esc(s.fullName)}')">✓ سەح</button>
+             <button class="btn-ok text-xs" onclick="openAcceptModal('${esc(s.fullName)}')">✓ سەح</button>
              <button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>
            </div>
            <p id="vrf-err-${esc(s.fullName)}" class="text-xs text-danger hidden mt-1"></p>
@@ -1134,26 +1136,30 @@ document.addEventListener('keydown', e => {
 //  قوتابییەکانم
 // ══════════════════════════════════════════════
 function renderMyStudents() {
-  const myStudents = (_profile && _profile.fullName !== ADMIN_NAME)
-    ? (_profile.students || []).map(s => s.fullName)
-    : DB.students.map(s => s.fullName);
+  const myEntries = (_profile && _profile.fullName !== ADMIN_NAME)
+    ? (_profile.students || [])
+    : DB.students.map(s => ({ fullName: s.fullName, subject: '' }));
 
   const tbody = document.getElementById('t-mylist-body');
   const empty = document.getElementById('t-mylist-empty');
 
-  if (!myStudents.length) {
+  if (!myEntries.length) {
     tbody.innerHTML = '';
     empty.classList.remove('hidden');
     return;
   }
   empty.classList.add('hidden');
 
-  tbody.innerHTML = myStudents.map(name => {
-    const s = findStudent(name);
+  const subjectLabel = { quran: 'قورئان', tajweed: 'تجوید', edu: 'پەروەردە', '': '—' };
+
+  tbody.innerHTML = myEntries.map(entry => {
+    const s = findStudent(entry.fullName);
     if (!s) return '';
-    const ac = attCounts(s.attendance || []);
+    const ac  = attCounts(s.attendance || []);
+    const sub = subjectLabel[entry.subject] || entry.subject || '—';
     return `<tr>
       <td class="text-cream font-medium">${s.fullName}</td>
+      <td><span class="text-xs text-gold">${sub}</span></td>
       <td>
         <div class="flex items-center gap-2 flex-wrap">
           <span class="flex items-center gap-1 text-xs"><span class="att att-p"></span>${ac.present}</span>
@@ -1163,7 +1169,10 @@ function renderMyStudents() {
         </div>
       </td>
       <td>
-        <button class="btn-ghost text-xs" onclick="openLessonsModal('${esc(s.fullName)}')">+ درس</button>
+        <button class="btn-ghost text-xs" onclick="openLessonsModal('${esc(s.fullName)}','${entry.subject||''}')">+ درس</button>
+      </td>
+      <td>
+        <button class="btn-ghost text-xs" style="color:#f87171" onclick="openTransferModal('${esc(s.fullName)}','${entry.subject||''}')">گواستنەوە</button>
       </td>
     </tr>`;
   }).join('');
@@ -1245,15 +1254,24 @@ async function submitAttendance() {
 //  مۆدالی درسەکان
 // ══════════════════════════════════════════════
 let _lesStudent = '';
+let _lesSubject = '';
 
-function openLessonsModal(name) {
+function openLessonsModal(name, subject) {
   _lesStudent = name;
-  document.getElementById('mles-title').textContent = 'درسەکان — ' + name;
+  _lesSubject = subject || '';
+  const subLabel = { quran:'قورئان', tajweed:'تجوید', edu:'پەروەردە' };
+  const title = subject ? `درس — ${name} (${subLabel[subject]||subject})` : `درسەکان — ${name}`;
+  document.getElementById('mles-title').textContent = title;
   const s = findStudent(name);
   const last = (s && s.lastLesson) || {};
   document.getElementById('mles-quran').value   = last.quran   || '';
   document.getElementById('mles-tajweed').value  = last.tajweed || '';
   document.getElementById('mles-edu').value      = last.edu     || '';
+  // نیشان/شاردنی ئەو خانانەی پەیوەندیدارن بەم مامۆستایە
+  const showAll = !subject;
+  document.getElementById('mles-row-quran').classList.toggle('hidden',   !showAll && subject !== 'quran');
+  document.getElementById('mles-row-tajweed').classList.toggle('hidden', !showAll && subject !== 'tajweed');
+  document.getElementById('mles-row-edu').classList.toggle('hidden',     !showAll && subject !== 'edu');
   document.getElementById('mles-err').classList.add('hidden');
   document.getElementById('modal-lessons').classList.remove('hidden');
 }
@@ -1287,13 +1305,61 @@ async function submitLessons() {
 }
 
 // ══════════════════════════════════════════════
+//  گواستنەوەی قوتابی بۆ مامۆستایەکی تر
+// ══════════════════════════════════════════════
+let _trStudent = '';
+let _trSubject = '';
+
+function openTransferModal(studentName, subject) {
+  _trStudent = studentName;
+  _trSubject = subject;
+  const subLabel = { quran:'قورئان', tajweed:'تجوید', edu:'پەروەردە' };
+  document.getElementById('mtr-title').textContent = 'گواستنەوە — ' + studentName;
+  document.getElementById('mtr-info').textContent  = `بەش: ${subLabel[subject]||subject||'—'}`;
+  // پڕکردنی لیستی مامۆستاکان (خۆی نەبێت)
+  const sel = document.getElementById('mtr-teacher');
+  sel.innerHTML = DB.teachers
+    .filter(t => t.fullName !== (_profile && _profile.fullName))
+    .map(t => `<option value="${esc(t.fullName)}">${t.fullName}</option>`)
+    .join('');
+  document.getElementById('mtr-err').classList.add('hidden');
+  document.getElementById('modal-transfer').classList.remove('hidden');
+}
+
+async function submitTransfer() {
+  const errEl      = document.getElementById('mtr-err');
+  errEl.classList.add('hidden');
+  const newTeacher = document.getElementById('mtr-teacher').value;
+  if (!newTeacher) { errEl.textContent = 'مامۆستا دیاری بکە'; errEl.classList.remove('hidden'); return; }
+
+  try {
+    // لە مامۆستای کۆن بسڕەوە
+    await apiCall('/api/transfer', 'POST', {
+      fromTeacher: _profile.fullName,
+      toTeacher:   newTeacher,
+      studentName: _trStudent,
+      subject:     _trSubject,
+    });
+    await loadDB();
+    _profile = findTeacher(_profile.fullName);
+    renderAllStudents();
+    renderMyStudents();
+    closeModal('modal-transfer');
+    toast(`${_trStudent} گوازرایەوە بۆ ${newTeacher} ✓`);
+  } catch(e) {
+    errEl.textContent = 'هەڵە: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+// ══════════════════════════════════════════════
 //  یاریدەدەری مۆدال
 // ══════════════════════════════════════════════
 function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
 }
 // کلیکی دەرەوەی مۆدال داخستنی
-['modal-att','modal-lessons'].forEach(id => {
+['modal-att','modal-lessons','modal-accept','modal-transfer'].forEach(id => {
   document.getElementById(id)?.addEventListener('click', e => {
     if (e.target.id === id) closeModal(id);
   });
@@ -1343,20 +1409,57 @@ function closeModal(id) {
       <button class="text-muted hover:text-cream text-lg leading-none" onclick="closeModal('modal-lessons')">✕</button>
     </div>
     <p class="text-xs text-muted -mt-2">بابەت / ئایەت / سورەتی خوێندووی بنووسە</p>
-    <div>
+    <div id="mles-row-quran">
       <label class="block text-xs text-muted mb-1">قورئان</label>
       <input id="mles-quran" class="field" type="text" placeholder="سورەتی بەقەرە، ئایەتی ١—٥"/>
     </div>
-    <div>
+    <div id="mles-row-tajweed">
       <label class="block text-xs text-muted mb-1">تجوید</label>
       <input id="mles-tajweed" class="field" type="text" placeholder="ئیدغام، مەخارجی تیف..."/>
     </div>
-    <div>
+    <div id="mles-row-edu">
       <label class="block text-xs text-muted mb-1">پەروەردە</label>
       <input id="mles-edu" class="field" type="text" placeholder="بابەتی ئەخلاق..."/>
     </div>
     <p id="mles-err" class="text-danger text-xs hidden"></p>
     <button class="btn-primary w-full" onclick="submitLessons()">تۆمارکردن</button>
+  </div>
+</div>
+
+<!-- ══ مۆدالی سەحکردن + بەش ══ -->
+<div id="modal-accept" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.65)">
+  <div class="card p-6 w-full max-w-sm space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="text-gold font-semibold" id="macc-title">سەحکردن</h3>
+      <button class="text-muted hover:text-cream text-lg leading-none" onclick="closeModal('modal-accept')">✕</button>
+    </div>
+    <div>
+      <label class="block text-xs text-muted mb-1.5">بەشی درس <span class="text-danger">*</span></label>
+      <select id="macc-subject" class="field">
+        <option value="quran">قورئان</option>
+        <option value="tajweed">تجوید</option>
+        <option value="edu">پەروەردە</option>
+      </select>
+    </div>
+    <p id="macc-err" class="text-danger text-xs hidden"></p>
+    <button class="btn-primary w-full" onclick="submitAccept()">سەحکردن ✓</button>
+  </div>
+</div>
+
+<!-- ══ مۆدالی گواستنەوە ══ -->
+<div id="modal-transfer" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.65)">
+  <div class="card p-6 w-full max-w-sm space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="text-gold font-semibold" id="mtr-title">گواستنەوەی قوتابی</h3>
+      <button class="text-muted hover:text-cream text-lg leading-none" onclick="closeModal('modal-transfer')">✕</button>
+    </div>
+    <p class="text-xs text-muted -mt-2" id="mtr-info"></p>
+    <div>
+      <label class="block text-xs text-muted mb-1.5">مامۆستای نوێ <span class="text-danger">*</span></label>
+      <select id="mtr-teacher" class="field"></select>
+    </div>
+    <p id="mtr-err" class="text-danger text-xs hidden"></p>
+    <button class="btn-primary w-full" onclick="submitTransfer()">گواستنەوە</button>
   </div>
 </div>
 
