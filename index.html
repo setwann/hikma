@@ -92,6 +92,17 @@
     .spin{width:1.1rem;height:1.1rem;border:2px solid rgba(201,168,76,.3);border-top-color:#C9A84C;
       border-radius:50%;animation:rot .65s linear infinite;display:inline-block;vertical-align:middle}
     @keyframes rot{to{transform:rotate(360deg)}}
+    .btn-danger{background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.45);color:#f87171;
+      border-radius:.5rem;padding:.4rem .85rem;cursor:pointer;font-family:'Noto Sans Arabic',sans-serif;
+      font-size:.82rem;transition:background .2s;white-space:nowrap}
+    .btn-danger:hover{background:rgba(192,57,43,.3)}
+    .btn-success{background:rgba(45,125,70,.15);border:1px solid rgba(45,125,70,.45);color:#4ade80;
+      border-radius:.5rem;padding:.4rem .85rem;cursor:pointer;font-family:'Noto Sans Arabic',sans-serif;
+      font-size:.82rem;transition:background .2s;white-space:nowrap}
+    .btn-success:hover{background:rgba(45,125,70,.3)}
+    .blacklist-badge{display:inline-flex;align-items:center;gap:.3rem;background:rgba(192,57,43,.15);
+      border:1px solid rgba(192,57,43,.4);color:#f87171;border-radius:.35rem;
+      padding:.2rem .55rem;font-size:.72rem;font-weight:600}
     .tab-badge{display:inline-flex;align-items:center;justify-content:center;
       background:#C9A84C;color:#1A1A2E;border-radius:999px;font-size:.65rem;font-weight:700;
       min-width:1.1rem;height:1.1rem;padding:0 .3rem;margin-right:.25rem;vertical-align:middle}
@@ -227,6 +238,7 @@
         <button class="nav-tab" onclick="tTab('t-add')" data-tab="t-add">زیادکردنی قوتابی</button>
         <button class="nav-tab" onclick="tTab('t-list')" data-tab="t-list">هەموو قوتابییەکان</button>
         <button class="nav-tab" onclick="tTab('t-mylist')" data-tab="t-mylist" id="t-mylist-tab">قوتابییەکانم</button>
+        <button class="nav-tab" onclick="tTab('t-blacklist')" data-tab="t-blacklist" id="t-blacklist-tab">⛔ لیستی ڕەش <span class="tab-badge hidden" id="blacklist-badge-count">0</span></button>
         <button class="nav-tab hidden" data-tab="t-add-teacher" id="t-add-teacher-tab" onclick="tTab('t-add-teacher')">زیادکردنی مامۆستا</button>
         <button class="nav-tab hidden" data-tab="t-detail" id="t-detail-tab">تەفسیل</button>
       </div>
@@ -431,6 +443,23 @@
       </div>
     </div>
 
+    <!-- لیستی ڕەش -->
+    <div id="t-blacklist" class="view">
+      <div class="card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="sh mb-0 flex-1"><span class="text-danger font-semibold">⛔ لیستی ڕەش</span></div>
+        </div>
+        <p class="text-muted text-sm mb-4">قوتابییانەی کە بەهۆی غیابی زۆر یان سەبەبێکی تری یان بڕیاری مامۆستا لیستی ڕەشن. دەتوانرێت دەرهێنرێنەوە.</p>
+        <div class="sx">
+          <table class="tbl">
+            <thead><tr><th>ناوی قوتابی</th><th>هۆکار</th><th>زیادکراوە لەلایەن</th><th>بەروار</th><th></th></tr></thead>
+            <tbody id="t-blacklist-body"></tbody>
+          </table>
+        </div>
+        <p id="t-blacklist-empty" class="hidden text-center text-muted py-8 text-sm">لیستی ڕەش بەتاڵە.</p>
+      </div>
+    </div>
+
     <!-- زیادکردنی مامۆستا (تەنها ئەدمین) -->
     <div id="t-add-teacher" class="view">
       <div class="card p-6 max-w-2xl mx-auto">
@@ -555,12 +584,73 @@ async function apiCall(endpoint, method='GET', body=null) {
 // ══════════════════════════════════════════════
 //  DB — داتای ژیوە لە مێمۆری
 // ══════════════════════════════════════════════
-const DB = { students: [], teachers: [] };
+const DB = { students: [], teachers: [], blacklist: [] };
 
 async function loadDB() {
   const data = await apiCall('/api/data');
-  DB.teachers = data.teachers;
-  DB.students  = data.students;
+  DB.teachers = data.teachers || [];
+  DB.students  = data.students || [];
+  try {
+    const blData = await apiCall('/api/blacklist');
+    DB.blacklist = blData.blacklist || [];
+  } catch(e) { DB.blacklist = []; }
+  const badge = document.getElementById('blacklist-badge-count');
+  if (badge) {
+    badge.textContent = DB.blacklist.length;
+    badge.classList.toggle('hidden', DB.blacklist.length === 0);
+  }
+  checkAutoBlacklist();
+}
+
+// ── چاودێری ئۆتۆماتیکی غیاب (دوو مانگ = ٨ هەفتە پشت سەر هەو) ──
+async function checkAutoBlacklist() {
+  const now = new Date();
+  for (const s of DB.students) {
+    if (DB.blacklist.some(b => b.studentName === s.fullName)) continue;
+    const att = (s.attendance || []).sort((a, b) => a.date.localeCompare(b.date));
+    // دووبارە غیابی ٨ هەفتەی پشت سەر هەو بدۆزەرەوە
+    let streak = 0;
+    let lastDate = null;
+    for (const a of att) {
+      if (a.status === 'absent') {
+        if (!lastDate) {
+          streak = 1;
+          lastDate = new Date(a.date);
+        } else {
+          const diff = (new Date(a.date) - lastDate) / (1000*60*60*24);
+          if (diff <= 60) { // دوو مانگ
+            streak++;
+            lastDate = new Date(a.date);
+          } else {
+            streak = 1;
+            lastDate = new Date(a.date);
+          }
+        }
+        if (streak >= 8) {
+          // ئۆتۆماتیک زیادبکە
+          try {
+            await apiCall('/api/blacklist', 'POST', {
+              studentName: s.fullName,
+              reason: 'ئۆتۆماتیک: دوو مانگ غیابی پشت سەر هەو',
+              addedBy: 'سیستەم',
+            });
+            DB.blacklist.push({ studentName: s.fullName, reason: 'ئۆتۆماتیک: دوو مانگ غیابی پشت سەر هەو', addedBy: 'سیستەم', addedAt: new Date().toISOString() });
+            const badge = document.getElementById('blacklist-badge-count');
+            if (badge) { badge.textContent = DB.blacklist.length; badge.classList.remove('hidden'); }
+            toast(`${s.fullName} بە ئۆتۆماتیک بۆ لیستی ڕەش نەقڵکرا`, true);
+          } catch(e) {}
+          break;
+        }
+      } else {
+        streak = 0;
+        lastDate = null;
+      }
+    }
+  }
+}
+
+function isBlacklisted(name) {
+  return DB.blacklist.some(b => b.studentName === name);
 }
 
 // ھەڵوەشاندنەوەی ئاسان
@@ -977,7 +1067,6 @@ function renderAllStudents() {
   const tbody   = document.getElementById('t-list-body');
   const empty   = document.getElementById('t-list-empty');
 
-  // map: studentName → teacherName
   const ownerMap = {};
   DB.teachers.forEach(t => (t.students||[]).forEach(s => { ownerMap[s.fullName] = t.fullName; }));
 
@@ -986,36 +1075,57 @@ function renderAllStudents() {
     .sort((a,b) => a.fullName.localeCompare(b.fullName, 'ar'));
 
   empty.classList.toggle('hidden', list.length > 0);
+  const isAdmin = _profile && _profile.fullName === ADMIN_NAME;
 
   tbody.innerHTML = list.map(s => {
     const owner = ownerMap[s.fullName];
+    const blk   = isBlacklisted(s.fullName);
+    const blBadge = blk ? `<span class="blacklist-badge">⛔ ڕەش</span>` : '';
+
     const nameCell = owner
-      ? `<td>
-           <span class="text-cream font-medium">${s.fullName}</span>
-           <span class="text-muted text-xs mr-2">${owner}</span>
-         </td>`
-      : `<td>
-           <span class="text-cream font-medium">${s.fullName}</span>
-         </td>`;
+      ? `<td><span class="text-cream font-medium">${s.fullName}</span> ${blBadge}<br/><span class="text-muted text-xs">${owner}</span></td>`
+      : `<td><span class="text-cream font-medium">${s.fullName}</span> ${blBadge}</td>`;
 
-    const isMyStudent = _profile && (_profile.fullName === ADMIN_NAME || (_profile.students||[]).some(ms => ms.fullName === s.fullName));
+    const isMyStudent = _profile && (isAdmin || (_profile.students||[]).some(ms => ms.fullName === s.fullName));
 
-    const actionCell = owner
-      ? `<td>${isMyStudent ? `<button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>` : ''}</td>`
-      : `<td>
-           <div class="flex items-center gap-2">
-             <button class="btn-ok text-xs" onclick="openAcceptModal('${esc(s.fullName)}')">✓ سەح</button>
-             <button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>
-           </div>
-           <p id="vrf-err-${esc(s.fullName)}" class="text-xs text-danger hidden mt-1"></p>
-         </td>`;
+    let actionBtns = '';
+    if (owner) {
+      actionBtns = isMyStudent ? `<button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>` : '';
+    } else {
+      actionBtns = `<button class="btn-ok text-xs" onclick="openAcceptModal('${esc(s.fullName)}')">✓ سەح</button>
+                    <button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>`;
+    }
+    // دوگمەی زیادکردن/دەرهێنان لە لیستی ڕەش — هەر مامۆستایەک
+    const blkBtn = blk
+      ? `<button class="btn-success text-xs" onclick="openRemoveBlacklist('${esc(s.fullName)}')">✓ دەرهێنان</button>`
+      : `<button class="btn-danger text-xs" onclick="openAddBlacklist('${esc(s.fullName)}')">⛔ لیستی ڕەش</button>`;
 
     return `<tr>
       ${nameCell}
       <td dir="ltr" class="font-mono text-xs">${s.phone||'—'}</td>
-      ${actionCell}
+      <td>
+        <div class="flex items-center gap-2 flex-wrap">
+          ${actionBtns}
+          ${isAdmin ? `<button class="btn-danger text-xs" onclick="confirmDeleteStudent('${esc(s.fullName)}')">🗑 سڕین</button>` : ''}
+          ${blkBtn}
+        </div>
+        <p id="vrf-err-${esc(s.fullName)}" class="text-xs text-danger hidden mt-1"></p>
+      </td>
     </tr>`;
   }).join('');
+}
+
+// ── سڕینەوەی قوتابی (تەنها ئەدمین) ──
+async function confirmDeleteStudent(name) {
+  if (!confirm(`دڵنیایت لە سڕینەوەی "${name}"؟ ئەم کارە گەڕاندنەوەی نییە.`)) return;
+  try {
+    await apiCall('/api/student', 'DELETE', { fullName: name });
+    await loadDB();
+    renderAllStudents();
+    toast(`${name} سڕایەوە ✓`);
+  } catch(e) {
+    toast('هەڵەی سڕینەوە: ' + e.message, true);
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -1144,6 +1254,8 @@ function tTab(id) {
   document.querySelectorAll('#page-teacher .nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
   document.querySelectorAll('#page-teacher .view').forEach(v => v.classList.toggle('active', v.id === id));
   if (id === 't-add') populateTeacherSelects(['add-teacherQuran','add-teacherEducation','add-teacherTajweed']);
+  if (id === 't-list') renderAllStudents();
+  if (id === 't-blacklist') renderBlacklist();
 }
 
 document.addEventListener('keydown', e => {
@@ -1191,6 +1303,10 @@ function renderMyStudents() {
       </td>
       <td>
         <button class="btn-ghost text-xs" style="color:#f87171" onclick="openTransferModal('${esc(s.fullName)}','${entry.subject||''}')">گواستنەوە</button>
+          ${isBlacklisted(s.fullName)
+            ? `<button class="btn-success text-xs" onclick="openRemoveBlacklist('${esc(s.fullName)}')">✓ دەرهێنان</button>`
+            : `<button class="btn-danger text-xs" onclick="openAddBlacklist('${esc(s.fullName)}')">⛔ ڕەش</button>`
+          }
       </td>
     </tr>`;
   }).join('');
@@ -1414,8 +1530,10 @@ async function submitTransfer() {
   const newTeacher = document.getElementById('mtr-teacher').value;
   if (!newTeacher) { errEl.textContent = 'مامۆستا دیاری بکە'; errEl.classList.remove('hidden'); return; }
 
+  const btn = document.querySelector('#modal-transfer .btn-danger') || document.querySelector('#modal-transfer button');
+  if (btn) btn.disabled = true;
+
   try {
-    // لە مامۆستای کۆن بسڕەوە
     await apiCall('/api/transfer', 'POST', {
       fromTeacher: _profile.fullName,
       toTeacher:   newTeacher,
@@ -1423,7 +1541,9 @@ async function submitTransfer() {
       subject:     _trSubject,
     });
     await loadDB();
-    _profile = findTeacher(_profile.fullName);
+    // نوێکردنەوەی profile لە داتای نوێ
+    const freshProfile = findTeacher(_profile.fullName);
+    if (freshProfile) _profile = freshProfile;
     renderAllStudents();
     renderMyStudents();
     closeModal('modal-transfer');
@@ -1431,17 +1551,101 @@ async function submitTransfer() {
   } catch(e) {
     errEl.textContent = 'هەڵە: ' + e.message;
     errEl.classList.remove('hidden');
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
 // ══════════════════════════════════════════════
 //  یاریدەدەری مۆدال
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  لیستی ڕەش
+// ══════════════════════════════════════════════
+let _blStudent = '';
+
+function renderBlacklist() {
+  const tbody = document.getElementById('t-blacklist-body');
+  const empty = document.getElementById('t-blacklist-empty');
+  if (!tbody) return;
+
+  if (!DB.blacklist.length) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = DB.blacklist.map(b => {
+    const date = b.addedAt ? b.addedAt.slice(0,10) : '—';
+    return `<tr>
+      <td class="text-cream font-medium">${b.studentName}</td>
+      <td class="text-muted text-xs">${b.reason || '—'}</td>
+      <td class="text-muted text-xs">${b.addedBy || '—'}</td>
+      <td class="font-mono text-xs" dir="ltr">${date}</td>
+      <td><button class="btn-success text-xs" onclick="openRemoveBlacklist('${esc(b.studentName)}')">✓ دەرهێنانەوە</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddBlacklist(name) {
+  _blStudent = name;
+  document.getElementById('mbl-title').textContent = `زیادکردن بۆ لیستی ڕەش — ${name}`;
+  document.getElementById('mbl-info').textContent  = 'قوتابی دەنەقڵێت، تەنها دیاری دەکرێت وەک لیستی ڕەش.';
+  document.getElementById('mbl-reason').value = '';
+  document.getElementById('mbl-err').classList.add('hidden');
+  document.getElementById('modal-blacklist-add').classList.remove('hidden');
+}
+
+async function submitAddBlacklist() {
+  const errEl = document.getElementById('mbl-err');
+  errEl.classList.add('hidden');
+  const reason = document.getElementById('mbl-reason').value.trim();
+  try {
+    await apiCall('/api/blacklist', 'POST', {
+      studentName: _blStudent,
+      reason,
+      addedBy: _profile ? _profile.fullName : '',
+    });
+    await loadDB();
+    renderAllStudents();
+    renderBlacklist();
+    closeModal('modal-blacklist-add');
+    toast(`${_blStudent} بۆ لیستی ڕەش زیادکرا ✓`);
+  } catch(e) {
+    errEl.textContent = 'هەڵە: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+function openRemoveBlacklist(name) {
+  _blStudent = name;
+  document.getElementById('mblr-info').textContent = `دڵنیایت لەوەی "${name}" لە لیستی ڕەش دەربهێنرێتەوە؟`;
+  document.getElementById('mblr-err').classList.add('hidden');
+  document.getElementById('modal-blacklist-remove').classList.remove('hidden');
+}
+
+async function submitRemoveBlacklist() {
+  const errEl = document.getElementById('mblr-err');
+  errEl.classList.add('hidden');
+  try {
+    await apiCall('/api/blacklist', 'DELETE', { studentName: _blStudent });
+    await loadDB();
+    renderAllStudents();
+    renderBlacklist();
+    closeModal('modal-blacklist-remove');
+    toast(`${_blStudent} لە لیستی ڕەش دەرهێنرایەوە ✓`);
+  } catch(e) {
+    errEl.textContent = 'هەڵە: ' + e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
 function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
 }
 // کلیکی دەرەوەی مۆدال داخستنی
-['modal-att','modal-lessons','modal-accept','modal-transfer','modal-edit'].forEach(id => {
+['modal-att','modal-lessons','modal-accept','modal-transfer','modal-edit','modal-blacklist-add','modal-blacklist-remove'].forEach(id => {
   document.getElementById(id)?.addEventListener('click', e => {
     if (e.target.id === id) closeModal(id);
   });
@@ -1631,6 +1835,36 @@ function closeModal(id) {
     </div>
     <p id="medit-err" class="text-danger text-xs hidden"></p>
     <button class="btn-primary w-full" onclick="submitEditStudent()">پاشەکەوتکردن</button>
+  </div>
+</div>
+
+<!-- مۆدالی زیادکردن بۆ لیستی ڕەش -->
+<div id="modal-blacklist-add" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.65)">
+  <div class="card p-6 w-full max-w-sm space-y-4" onclick="event.stopPropagation()">
+    <h3 id="mbl-title" class="text-cream font-semibold">زیادکردن بۆ لیستی ڕەش</h3>
+    <p id="mbl-info" class="text-muted text-xs"></p>
+    <div>
+      <label class="block text-xs text-muted mb-1.5">هۆکار (ئارەزوومەندانە)</label>
+      <textarea id="mbl-reason" class="field" rows="3" placeholder="هۆکاری زیادکردن بۆ لیستی ڕەش..."></textarea>
+    </div>
+    <p id="mbl-err" class="text-danger text-xs hidden"></p>
+    <div class="flex gap-2">
+      <button class="btn-danger flex-1" onclick="submitAddBlacklist()">⛔ زیادکردن بۆ لیستی ڕەش</button>
+      <button class="btn-ghost" onclick="closeModal('modal-blacklist-add')">هەڵوەشاندنەوە</button>
+    </div>
+  </div>
+</div>
+
+<!-- مۆدالی دەرهێنان لە لیستی ڕەش -->
+<div id="modal-blacklist-remove" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.65)">
+  <div class="card p-6 w-full max-w-sm space-y-4" onclick="event.stopPropagation()">
+    <h3 class="text-cream font-semibold">دەرهێنان لە لیستی ڕەش</h3>
+    <p id="mblr-info" class="text-muted text-sm"></p>
+    <p id="mblr-err" class="text-danger text-xs hidden"></p>
+    <div class="flex gap-2">
+      <button class="btn-success flex-1" onclick="submitRemoveBlacklist()">✓ دەرهێنانەوە</button>
+      <button class="btn-ghost" onclick="closeModal('modal-blacklist-remove')">هەڵوەشاندنەوە</button>
+    </div>
   </div>
 </div>
 
