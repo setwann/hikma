@@ -209,30 +209,41 @@ export default {
         if (!fromTeacher || !toTeacher || !studentName)
           return json({ error: "زانیاری ناتەواو" }, 400);
 
+        // نارمالایزکردنی subject: null/undefined/بەتاڵ هەموو یەک دەژمێردرێن
+        const norm = v => (v == null ? "" : String(v).trim());
+        const subj = norm(subject);
+
         const teachers = (await getKV(env, "teachers")) || [];
         const fromIdx = teachers.findIndex(t => t.fullName === fromTeacher);
         const toIdx   = teachers.findIndex(t => t.fullName === toTeacher);
         if (fromIdx === -1) return json({ error: "مامۆستای کۆن نەدۆزرایەوە" }, 404);
         if (toIdx   === -1) return json({ error: "مامۆستای نوێ نەدۆزرایەوە" }, 404);
 
-        // لە کۆن بسڕەوە
-        const entry = (teachers[fromIdx].students || []).find(
-          s => s.fullName === studentName && ((s.subject||"") === (subject||""))
+        // دۆزینەوەی قوتابی بە subject نارمالایزکراو
+        // ئەگەر subject بەتاڵ بوو، بەبێ بەش دۆزینەوە (هر subject بێت)
+        let entry = (teachers[fromIdx].students || []).find(
+          s => s.fullName === studentName && norm(s.subject) === subj
         );
+        if (!entry && subj === "") {
+          entry = (teachers[fromIdx].students || []).find(s => s.fullName === studentName);
+        }
         if (!entry) return json({ error: "قوتابی لای ئەم مامۆستایە نەدۆزرایەوە" }, 404);
 
+        const entrySubj = norm(entry.subject);
+
+        // لە کۆن بسڕەوە
         teachers[fromIdx].students = (teachers[fromIdx].students || []).filter(
-          s => !(s.fullName === studentName && ((s.subject||"") === (subject||"")))
+          s => !(s.fullName === studentName && norm(s.subject) === entrySubj)
         );
 
         // بۆ نوێ زیاد بکە
         const alreadyAt = (teachers[toIdx].students || []).some(
-          s => s.fullName === studentName && ((s.subject||"") === (subject||""))
+          s => s.fullName === studentName && norm(s.subject) === entrySubj
         );
         if (!alreadyAt) {
           teachers[toIdx].students = [
             ...(teachers[toIdx].students || []),
-            { fullName: studentName, subject: subject || "", acceptedAt: new Date().toISOString() },
+            { fullName: studentName, subject: entry.subject || "", acceptedAt: new Date().toISOString() },
           ];
         }
 
