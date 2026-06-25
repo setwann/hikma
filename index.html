@@ -293,9 +293,20 @@
           <input id="t-search" class="field" style="width:180px;padding:.45rem .75rem;font-size:.82rem"
             type="text" placeholder="گەڕان بە ناو..." oninput="renderAllStudents()"/>
         </div>
+        <!-- دوگمەی پاشەکەوتی کۆی -->
+        <div id="bulk-accept-bar" class="hidden flex items-center gap-3 mb-3 p-3 rounded-lg" style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25)">
+          <span class="text-sm text-gold font-semibold" id="bulk-count-label">٠ قوتابی هەڵبژێردراو</span>
+          <select id="bulk-subject" class="field" style="width:140px;padding:.35rem .6rem;font-size:.82rem">
+            <option value="quran">قورئان</option>
+            <option value="tajweed">تجوید</option>
+            <option value="edu">پەروەردە</option>
+          </select>
+          <button class="btn-ok text-sm" onclick="submitBulkAccept()">✓ پاشەکەوتی کۆی</button>
+          <button class="btn-ghost text-xs" onclick="clearBulkSelection()">پاككردنەوە</button>
+        </div>
         <div class="sx">
           <table class="tbl">
-            <thead><tr><th>ناوی قوتابی</th><th>تەلەفۆن</th><th></th></tr></thead>
+            <thead><tr><th style="width:2rem"><input type="checkbox" id="bulk-check-all" title="هەموو هەڵبژێرە" onchange="toggleAllBulk(this.checked)" class="accent-gold"/></th><th>ناوی قوتابی</th><th>تەلەفۆن</th><th></th></tr></thead>
             <tbody id="t-list-body"></tbody>
           </table>
         </div>
@@ -986,6 +997,58 @@ async function submitAddTeacher() {
 // ══════════════════════════════════════════════
 let _acceptName = '';
 
+// ══════════════════════════════════════════════
+//  هەڵبژاردنی کۆی (Bulk Accept)
+// ══════════════════════════════════════════════
+function onBulkCheckChange() {
+  const checked = document.querySelectorAll('.bulk-chk:checked');
+  const bar = document.getElementById('bulk-accept-bar');
+  const label = document.getElementById('bulk-count-label');
+  const allChk = document.getElementById('bulk-check-all');
+  const total = document.querySelectorAll('.bulk-chk').length;
+  bar.classList.toggle('hidden', checked.length === 0);
+  label.textContent = checked.length + ' قوتابی هەڵبژێردراو';
+  allChk.indeterminate = checked.length > 0 && checked.length < total;
+  allChk.checked = total > 0 && checked.length === total;
+}
+
+function toggleAllBulk(state) {
+  document.querySelectorAll('.bulk-chk').forEach(c => c.checked = state);
+  onBulkCheckChange();
+}
+
+function clearBulkSelection() {
+  document.querySelectorAll('.bulk-chk').forEach(c => c.checked = false);
+  document.getElementById('bulk-check-all').checked = false;
+  onBulkCheckChange();
+}
+
+async function submitBulkAccept() {
+  const checked = [...document.querySelectorAll('.bulk-chk:checked')];
+  if (!checked.length) return;
+  const subject = document.getElementById('bulk-subject').value;
+  const names = checked.map(c => c.dataset.name);
+  const confirm_msg = names.length + ' قوتابی سەح بکرێن؟\n' + names.join('، ');
+  if (!confirm(confirm_msg)) return;
+
+  let done = 0, errs = [];
+  for (const name of names) {
+    try {
+      await apiCall('/api/accept', 'POST', { teacherName: _profile.fullName, studentName: name, subject });
+      done++;
+    } catch(e) {
+      errs.push(name + ': ' + e.message);
+    }
+  }
+  await loadDB();
+  _profile = findTeacher(_profile.fullName);
+  clearBulkSelection();
+  renderAllStudents();
+  renderMyStudents();
+  if (errs.length) toast('هەڵە: ' + errs.join(' | '), true);
+  else toast(done + ' قوتابی سەحکرا ✓');
+}
+
 function openAcceptModal(studentName) {
   _acceptName = studentName;
   document.getElementById('macc-title').textContent = 'سەحکردنی — ' + studentName;
@@ -1052,14 +1115,17 @@ function renderAllStudents() {
     const isMyStudent = _profile && (isAdmin || (_profile.students||[]).some(ms => ms.fullName === s.fullName));
 
     const viewBtn = `<button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>`;
-    const acceptBtn = !owner ? `<button class="btn-ok text-xs" onclick="openAcceptModal('${esc(s.fullName)}')">✓ سەح</button>` : '';
-    const actionBtns = acceptBtn + viewBtn;
+    const checkboxCell = !owner
+      ? `<td style="width:2rem;text-align:center"><input type="checkbox" class="bulk-chk accent-gold" data-name="${esc(s.fullName)}" onchange="onBulkCheckChange()"/></td>`
+      : `<td></td>`;
+    const actionBtns = viewBtn;
     // دوگمەی زیادکردن/دەرهێنان لە لیستی ڕەش — هەر مامۆستایەک
     const blkBtn = blk
       ? `<button class="btn-success text-xs" onclick="openRemoveBlacklist('${esc(s.fullName)}')">✓ دەرهێنان</button>`
       : `<button class="btn-danger text-xs" onclick="openAddBlacklist('${esc(s.fullName)}')">⛔ لیستی ڕەش</button>`;
 
     return `<tr>
+      ${checkboxCell}
       ${nameCell}
       <td dir="ltr" class="font-mono text-xs">${s.phone||'—'}</td>
       <td>
