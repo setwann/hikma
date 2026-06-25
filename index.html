@@ -175,7 +175,6 @@
         <button class="nav-tab" onclick="sTab('s-att')" data-tab="s-att">حازربوون</button>
         <button class="nav-tab" onclick="sTab('s-notes')" data-tab="s-notes">تێبینییەکان</button>
       </div>
-      <button class="btn-ghost text-xs" onclick="hardRefresh()" title="ڕیفریشی بەهێز">🔄</button>
       <button class="btn-ghost text-xs" onclick="hardRefresh()" title="ڕیفریشی بەهێز">🔄</button> <button class="btn-ghost text-xs" onclick="doLogout()">دەرچوون</button>
     </div>
   </nav>
@@ -241,9 +240,8 @@
         <button class="nav-tab" onclick="tTab('t-mylist')" data-tab="t-mylist" id="t-mylist-tab">قوتابییەکانم</button>
         <button class="nav-tab" onclick="tTab('t-blacklist')" data-tab="t-blacklist" id="t-blacklist-tab">⛔ لیستی ڕەش <span class="tab-badge hidden" id="blacklist-badge-count">0</span></button>
         <button class="nav-tab hidden" data-tab="t-add-teacher" id="t-add-teacher-tab" onclick="tTab('t-add-teacher')">زیادکردنی مامۆستا</button>
-        <button class="nav-tab hidden" data-tab="t-detail" id="t-detail-tab">تەفسیل</button>
+        <span id="t-detail-tab" class="hidden" data-tab="t-detail"></span>
       </div>
-      <button class="btn-ghost text-xs" onclick="hardRefresh()" title="ڕیفریشی بەهێز">🔄</button>
       <button class="btn-ghost text-xs" onclick="hardRefresh()" title="ڕیفریشی بەهێز">🔄</button> <button class="btn-ghost text-xs" onclick="doLogout()">دەرچوون</button>
     </div>
   </nav>
@@ -1125,7 +1123,7 @@ function renderAllStudents() {
 
     let actionBtns = '';
     if (owner) {
-      actionBtns = isMyStudent ? `<button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>` : '';
+      actionBtns = `<button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>`;
     } else {
       actionBtns = `<button class="btn-ok text-xs" onclick="openAcceptModal('${esc(s.fullName)}')">✓ سەح</button>
                     <button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>`;
@@ -1170,17 +1168,12 @@ async function showDetail(name, backTab) {
   const p = findStudent(name);
   if(!p) { toast('قوتابی نەدۆزرایەوە', true); return; }
 
-  // مامۆستا تەنها قوتابییەکانی خۆی دەبینێت، ئەدمین هەموویان
-  if (_profile && _profile.fullName !== ADMIN_NAME) {
-    const myStudents = (_profile.students || []).map(s => s.fullName);
-    if (!myStudents.includes(name)) { toast('ئەم قوتابییە هی تۆ نییە', true); return; }
-  }
-  document.getElementById('t-detail-tab').classList.remove('hidden');
-  document.querySelector('[data-tab="t-detail"]').onclick = () => tTab(backTab);
   // داتای KV بخوێنەوە
   const kv = await loadStudentDetail(name);
-  document.getElementById('t-detail-content').innerHTML = buildDetailHTML(p, kv);
-  tTab('t-detail');
+  // لە modal نیشان بدە
+  const modal = document.getElementById('modal-detail');
+  document.getElementById('modal-detail-content').innerHTML = buildDetailHTML(p, kv);
+  modal.classList.remove('hidden');
 }
 
 function buildDetailHTML(p, kv) {
@@ -1542,7 +1535,7 @@ async function submitEditStudent() {
     const p2 = findStudent(name);
     if (p2) {
       const kv2 = await loadStudentDetail(name);
-      document.getElementById('t-detail-content').innerHTML = buildDetailHTML(p2, kv2);
+      document.getElementById('modal-detail-content').innerHTML = buildDetailHTML(p2, kv2);
     }
     toast(`${name} نوێکرایەوە ✓`);
   } catch(e) {
@@ -1797,7 +1790,7 @@ function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
 }
 // کلیکی دەرەوەی مۆدال داخستنی
-['modal-att','modal-lessons','modal-accept','modal-transfer','modal-edit','modal-blacklist-add','modal-blacklist-remove','modal-edit-teacher'].forEach(id => {
+['modal-att','modal-lessons','modal-accept','modal-transfer','modal-edit','modal-blacklist-add','modal-blacklist-remove','modal-edit-teacher','modal-detail'].forEach(id => {
   document.getElementById(id)?.addEventListener('click', e => {
     if (e.target.id === id) closeModal(id);
   });
@@ -2073,5 +2066,16 @@ function closeModal(id) {
   </div>
 </div>
 
+
+<!-- ══ مۆدالی تەفسیلی قوتابی ══ -->
+<div id="modal-detail" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.65);overflow-y:auto">
+  <div class="card p-6 w-full max-w-2xl space-y-4" style="max-height:90vh;overflow-y:auto">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-gold font-semibold">تەفسیلی قوتابی</span>
+      <button class="btn-ghost text-xs" onclick="closeModal('modal-detail')">✕ داخستن</button>
+    </div>
+    <div id="modal-detail-content"></div>
+  </div>
+</div>
 </body>
 </html>
