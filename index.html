@@ -1333,6 +1333,7 @@ function renderMyStudents() {
         <button class="btn-ghost text-xs" onclick="openLessonsModal('${esc(s.fullName)}','${entry.subject||''}')">+ درس</button>
       </td>
       <td>
+        <button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-mylist')">بینین</button>
         <button class="btn-ghost text-xs" style="color:#f87171" onclick="openTransferModal('${esc(s.fullName)}','${entry.subject||''}')">گواستنەوە</button>
           ${isBlacklisted(s.fullName)
             ? `<button class="btn-success text-xs" onclick="openRemoveBlacklist('${esc(s.fullName)}')">✓ دەرهێنان</button>`
