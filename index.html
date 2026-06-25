@@ -55,7 +55,7 @@
     .nav-tab{padding:.55rem 1.1rem;border-radius:.4rem;cursor:pointer;font-size:.85rem;font-weight:500;
       color:#8892A4;background:transparent;border:none;font-family:'Noto Sans Arabic',sans-serif;
       transition:color .2s,background .2s;white-space:nowrap}
-    .nav-tab.active{color:#C9A84C;background:rgba(201,168,76,.1)}
+    .nav-tab.active{color:#C9A84C;background:rgba(201,168,76,.1)}.active-stab{color:#C9A84C;background:rgba(201,168,76,.12);border-bottom:2px solid #C9A84C}
     .nav-tab:hover:not(.active){color:#F5F0E8}
     .view{display:none}.view.active{display:block}
     .badge{display:inline-flex;align-items:center;justify-content:center;
@@ -252,7 +252,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         <button class="nav-tab" onclick="tTab('t-list')" data-tab="t-list">هەموو قوتابییەکان</button>
         <button class="nav-tab" onclick="tTab('t-mylist')" data-tab="t-mylist" id="t-mylist-tab">قوتابییەکانم</button>
         <button class="nav-tab" onclick="tTab('t-blacklist')" data-tab="t-blacklist" id="t-blacklist-tab">⛔ لیستی ڕەش <span class="tab-badge hidden" id="blacklist-badge-count">0</span></button>
-        <button class="nav-tab hidden" data-tab="t-add-teacher" id="t-add-teacher-tab" onclick="tTab('t-add-teacher')">زیادکردنی مامۆستا</button>
+        <button class="nav-tab hidden" data-tab="t-add-teacher" id="t-add-teacher-tab" onclick="tTab('t-add-teacher')">مامۆستاکان</button>
         <span id="t-detail-tab" class="hidden" data-tab="t-detail"></span>
       </div>
       <button class="btn-ghost text-xs" onclick="hardRefresh()" title="ڕیفریشی بەهێز">🔄</button> <button class="btn-ghost text-xs" onclick="doLogout()">دەرچوون</button>
@@ -361,17 +361,34 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
     <!-- زیادکردنی مامۆستا (تەنها ئەدمین) -->
     <div id="t-add-teacher" class="view">
-      <div class="card p-6 max-w-2xl mx-auto">
-        <div class="sh"><span class="text-gold font-semibold">زیادکردنی مامۆستای نوێ</span></div>
-        <p class="text-muted text-sm mb-4">دەتوانیت چەندین مامۆستا زیاد بکەیت بە یەک پاشەکەوتکردن.</p>
+      <!-- sub-tabs -->
+      <div class="flex gap-2 mb-4 border-b border-white/10 pb-2">
+        <button id="stab-list" class="btn-ghost text-sm stab active-stab" onclick="switchTeacherSubTab('list')">📋 مامۆستاکان</button>
+        <button id="stab-add"  class="btn-ghost text-sm stab" onclick="switchTeacherSubTab('add')">➕ زیادکردنی مامۆستا</button>
+      </div>
 
-        <div id="teacher-entries" class="space-y-4"></div>
+      <!-- sub-view: لیستی مامۆستاکان -->
+      <div id="steacher-list">
+        <div class="card p-4 max-w-3xl mx-auto">
+          <div class="sh mb-3"><span class="text-gold font-semibold">هەموو مامۆستاکان</span></div>
+          <div id="teacher-list-body" class="space-y-2"></div>
+          <p id="teacher-list-empty" class="hidden text-center text-muted py-8 text-sm">هیچ مامۆستایەک نەدۆزرایەوە.</p>
+        </div>
+      </div>
 
-        <button class="btn-ghost text-sm mt-4 w-full border border-dashed border-white/20 py-2 rounded-lg"
-                onclick="addTeacherEntry()">+ زیادکردنی مامۆستایەکی تر</button>
+      <!-- sub-view: زیادکردنی مامۆستا -->
+      <div id="steacher-add" class="hidden">
+        <div class="card p-6 max-w-2xl mx-auto">
+          <div class="sh"><span class="text-gold font-semibold">زیادکردنی مامۆستای نوێ</span></div>
 
-        <p id="at-err" class="text-sm text-danger hidden mt-4"></p>
-        <button class="btn-primary full mt-4" id="at-btn" onclick="submitAddTeacher()">پاشەکەوتکردنی هەمووی</button>
+          <div id="teacher-entries" class="space-y-4 mt-4"></div>
+
+          <button class="btn-ghost text-sm mt-4 w-full border border-dashed border-white/20 py-2 rounded-lg"
+                  onclick="addTeacherEntry()">+ زیادکردنی مامۆستایەکی تر</button>
+
+          <p id="at-err" class="text-sm text-danger hidden mt-4"></p>
+          <button class="btn-primary full mt-4" id="at-btn" onclick="submitAddTeacher()">پاشەکەوتکردنی هەمووی</button>
+        </div>
       </div>
     </div>
 
@@ -928,9 +945,11 @@ function addTeacherEntry() {
   div.className = 'card-inner p-4 space-y-3 relative';
   div.innerHTML = `
     <button onclick="document.getElementById('te-${id}').remove()" class="absolute top-2 left-2 text-muted hover:text-danger text-xs">✕</button>
+
+    <!-- ناو + موبایل -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
-        <label class="block text-xs text-muted mb-1">ناوی تەواو <span class="text-danger">*</span></label>
+        <label class="block text-xs text-muted mb-1">ناوی مامۆستا <span class="text-danger">*</span></label>
         <input id="te-name-${id}" class="field" type="text" placeholder="ناوی مامۆستا..." autocomplete="off"/>
       </div>
       <div>
@@ -938,18 +957,72 @@ function addTeacherEntry() {
         <input id="te-phone-${id}" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
       </div>
     </div>
+
+    <!-- ناونیشان + رۆژی دەوام -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
         <label class="block text-xs text-muted mb-1">ناونیشان</label>
         <input id="te-addr-${id}" class="field" type="text" placeholder="گەڕەک، شار..."/>
       </div>
       <div>
+        <label class="block text-xs text-muted mb-1">رۆژی دەوام</label>
+        <input id="te-attend-${id}" class="field" type="text" placeholder="شەممە، یەکشەممە..."/>
+      </div>
+    </div>
+
+    <!-- وانەکان -->
+    <div>
+      <label class="block text-xs text-muted mb-2">مامۆستای وانەی</label>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="card-inner p-3 space-y-1">
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" id="te-quran-${id}" class="accent-gold" onchange="toggleSubjectTime('quran','${id}')"/> قورئان
+          </label>
+          <input id="te-qurantime-${id}" class="field hidden text-xs" type="text" placeholder="کاتی وانە..."/>
+        </div>
+        <div class="card-inner p-3 space-y-1">
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" id="te-tajweed-${id}" class="accent-gold" onchange="toggleSubjectTime('tajweed','${id}')"/> تەجوید
+          </label>
+          <input id="te-tajweedtime-${id}" class="field hidden text-xs" type="text" placeholder="کاتی وانە..."/>
+        </div>
+        <div class="card-inner p-3 space-y-1">
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" id="te-edu-${id}" class="accent-gold" onchange="toggleSubjectTime('edu','${id}')"/> پەروەردە
+          </label>
+          <input id="te-edutime-${id}" class="field hidden text-xs" type="text" placeholder="کاتی وانە..."/>
+        </div>
+      </div>
+    </div>
+
+    <!-- پیشە + باری دارایی -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
         <label class="block text-xs text-muted mb-1">پیشە</label>
         <input id="te-job-${id}" class="field" type="text" placeholder="مامۆستا، ئیمام..."/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-2">باری دارایی</label>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+            <input type="radio" name="te-financial-${id}" value="کرێچی" class="accent-gold"/> کرێچی
+          </label>
+          <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+            <input type="radio" name="te-financial-${id}" value="خاوەن خانوو" class="accent-gold"/> خاوەن خانوو
+          </label>
+        </div>
       </div>
     </div>
   `;
   document.getElementById('teacher-entries').appendChild(div);
+}
+
+function toggleSubjectTime(subject, id) {
+  const cb = document.getElementById(`te-${subject}-${id}`);
+  const inp = document.getElementById(`te-${subject}time-${id}`);
+  if (!cb || !inp) return;
+  inp.classList.toggle('hidden', !cb.checked);
+  if (!cb.checked) inp.value = '';
 }
 
 async function submitAddTeacher() {
@@ -976,11 +1049,22 @@ async function submitAddTeacher() {
       errEl.textContent = `ژمارەی ${name} هەڵەیە. نموونە: 07701234567`;
       errEl.classList.remove('hidden'); return;
     }
+    const subjects = [];
+    if (document.getElementById(`te-quran-${id}`)?.checked)
+      subjects.push({ name: 'quran', time: document.getElementById(`te-qurantime-${id}`)?.value.trim() || '' });
+    if (document.getElementById(`te-tajweed-${id}`)?.checked)
+      subjects.push({ name: 'tajweed', time: document.getElementById(`te-tajweedtime-${id}`)?.value.trim() || '' });
+    if (document.getElementById(`te-edu-${id}`)?.checked)
+      subjects.push({ name: 'edu', time: document.getElementById(`te-edutime-${id}`)?.value.trim() || '' });
+    const financial = document.querySelector(`input[name="te-financial-${id}"]:checked`)?.value || '';
     list.push({
       fullName: name, phone,
-      address: document.getElementById(`te-addr-${id}`)?.value.trim() || '',
-      job:     document.getElementById(`te-job-${id}`)?.value.trim() || '',
-      ijaza: 'نەخێر', ijazaDetail: '', subjects: [], assignedClasses: [], students: [],
+      address:    document.getElementById(`te-addr-${id}`)?.value.trim() || '',
+      attendDays: document.getElementById(`te-attend-${id}`)?.value.trim() || '',
+      job:        document.getElementById(`te-job-${id}`)?.value.trim() || '',
+      financial,
+      subjects,
+      ijaza: 'نەخێر', ijazaDetail: '', assignedClasses: [], students: [],
     });
   }
 
@@ -996,7 +1080,7 @@ async function submitAddTeacher() {
       ? `${res.added} تۆمارکرا ✓ — ${res.skipped.length} تەکراری بوون: ${res.skipped.join('، ')}`
       : `${res.added} مامۆستا تۆمارکران ✓`;
     toast(msg);
-    tTab('t-home');
+    switchTeacherSubTab('list');
   } catch(e) {
     errEl.textContent = 'هەڵە: ' + e.message;
     errEl.classList.remove('hidden');
@@ -1468,6 +1552,50 @@ function tTab(id) {
   if (id === 't-list') renderAllStudents();
   if (id === 't-mylist') renderMyStudents();
   if (id === 't-blacklist') renderBlacklist();
+  if (id === 't-add-teacher') { switchTeacherSubTab('list'); renderTeacherList(); }
+}
+
+function switchTeacherSubTab(tab) {
+  document.getElementById('steacher-list').classList.toggle('hidden', tab !== 'list');
+  document.getElementById('steacher-add').classList.toggle('hidden', tab !== 'add');
+  document.getElementById('stab-list').classList.toggle('active-stab', tab === 'list');
+  document.getElementById('stab-add').classList.toggle('active-stab', tab === 'add');
+  if (tab === 'list') renderTeacherList();
+  if (tab === 'add' && document.getElementById('teacher-entries').children.length === 0) addTeacherEntry();
+}
+
+function renderTeacherList() {
+  const body  = document.getElementById('teacher-list-body');
+  const empty = document.getElementById('teacher-list-empty');
+  if (!body) return;
+  const teachers = DB.teachers || [];
+  if (teachers.length === 0) {
+    body.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  const subjectLabel = { quran: 'قورئان', tajweed: 'تەجوید', edu: 'پەروەردە' };
+  body.innerHTML = teachers.map(t => {
+    const subjs = (t.subjects || []).map(s => {
+      const label = subjectLabel[s.name] || s.name;
+      return s.time ? `${label} (${s.time})` : label;
+    }).join(' · ') || '—';
+    return `<div class="card-inner p-3 flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+      <div>
+        <div class="font-semibold text-cream">${t.fullName}</div>
+        <div class="text-xs text-muted mt-0.5 flex flex-wrap gap-2">
+          <span dir="ltr">${t.phone || '—'}</span>
+          ${t.attendDays ? `<span>📅 ${t.attendDays}</span>` : ''}
+          ${t.address    ? `<span>📍 ${t.address}</span>` : ''}
+          ${t.job        ? `<span>💼 ${t.job}</span>` : ''}
+          ${t.financial  ? `<span>🏠 ${t.financial}</span>` : ''}
+        </div>
+        <div class="text-xs text-gold mt-1">${subjs}</div>
+      </div>
+      <div class="text-xs text-muted shrink-0">${t.students?.length || 0} قوتابی</div>
+    </div>`;
+  }).join('');
 }
 
 document.addEventListener('keydown', e => {
