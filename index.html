@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ع<!DOCTYPE html>
 <html lang="ckb" dir="rtl">
 <head>
   <meta charset="UTF-8"/>
@@ -275,146 +275,16 @@
     <div id="t-add" class="view">
       <div class="card p-6 max-w-2xl mx-auto">
         <div class="sh"><span class="text-gold font-semibold">زیادکردنی قوتابی نوێ</span></div>
-        <p class="text-muted text-sm mb-6">خانەکانی ئەستێرەدار <span class="text-danger">*</span> پێویستە پڕ بکرێنەوە.</p>
+        <p class="text-muted text-sm mb-4">دەتوانیت چەندین قوتابی زیاد بکەیت بە یەک پاشەکەوتکردن.</p>
 
-        <div class="space-y-5">
+        <!-- کانتەینەری ئەنتریەکان -->
+        <div id="student-entries" class="space-y-4"></div>
 
-          <!-- ردیف ١: ناو + تەمەن -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs text-muted mb-1.5">ناوی قوتابی <span class="text-danger">*</span></label>
-              <input id="add-name" class="field" type="text" placeholder="کامەران علی حسەن" autocomplete="off"/>
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1.5">تەمەن</label>
-              <input id="add-age" class="field" type="number" placeholder="١٢" min="4" max="25"/>
-            </div>
-          </div>
-
-          <!-- ردیف ٢: موبایل سەرپەرەشتیار + پیشەی باوک -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs text-muted mb-1.5">ژمارەی موبایلی سەرپەرەشتیار <span class="text-danger">*</span></label>
-              <input id="add-phone" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1.5">پیشەی باوک</label>
-              <input id="add-fatherJob" class="field" type="text" placeholder="مامەڵەکەر، مامۆستا..."/>
-            </div>
-          </div>
-
-          <!-- ردیف ٣: باری دارایی -->
-          <div>
-            <label class="block text-xs text-muted mb-2">باری دارایی</label>
-            <div class="flex gap-3">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="add-financial" value="باش" class="accent-gold"/>
-                <span class="text-sm text-cream">باش</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="add-financial" value="خراپ" class="accent-gold"/>
-                <span class="text-sm text-cream">خراپ</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- ردیف ٤: گەڕەک + نزیکترین شوێن -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs text-muted mb-1.5">گەڕەک</label>
-              <input id="add-neighborhood" class="field" type="text" placeholder="گەڕەکی..."/>
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1.5">نزیکترین شوێن لە ماڵیانەوە</label>
-              <input id="add-landmark" class="field" type="text" placeholder="نزیک مزگەوت، بازاڕ..."/>
-            </div>
-          </div>
-
-          <!-- ردیف ٥: نەخۆشی -->
-          <div>
-            <label class="block text-xs text-muted mb-2">نەخۆشی</label>
-            <div class="flex gap-3 mb-2">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="add-illness" value="نیەتی" checked class="accent-gold" onchange="toggleIllness(false)"/>
-                <span class="text-sm text-cream">نیەتی</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="add-illness" value="هەیەتی" class="accent-gold" onchange="toggleIllness(true)"/>
-                <span class="text-sm text-cream">هەیەتی</span>
-              </label>
-            </div>
-            <input id="add-illnessDetail" class="field hidden" type="text" placeholder="چۆن نەخۆشییەکە؟"/>
-          </div>
-
-          <!-- ردیف ٦: ئاستی خوێندن + ئاستی قوتابی -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs text-muted mb-1.5">ئاستی خوێندن</label>
-              <input id="add-educationLevel" class="field" type="text" placeholder="پۆلی ٥، ناوەندی..."/>
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1.5">ئاستیی قوتابی</label>
-              <select id="add-studentLevel" class="field">
-                <option value="">— هەڵبژێرە —</option>
-                <option value="باش">باش</option>
-                <option value="تەواو باش">تەواو باش</option>
-                <option value="مامناوەند">مامناوەند</option>
-                <option value="کەم">کەم</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- ردیف ٧: قوتابی (جزء) -->
-          <div>
-            <label class="block text-xs text-muted mb-2">قوتابی</label>
-            <div class="flex flex-wrap gap-3">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" id="add-juz-amma" class="accent-gold"/>
-                <span class="text-sm text-cream">جوزئی عم</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" id="add-juz-tabarak" class="accent-gold"/>
-                <span class="text-sm text-cream">جوزئی تبارک</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" id="add-juz-khatm" class="accent-gold"/>
-                <span class="text-sm text-cream">ختم</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- ردیف ٨: مامۆستاکان -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-xs text-muted mb-1.5">مامۆستای قورئان</label>
-              <select id="add-teacherQuran" class="field">
-                <option value="">— هیچ —</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1.5">مامۆستای پەروەردە</label>
-              <select id="add-teacherEducation" class="field">
-                <option value="">— هیچ —</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1.5">مامۆستای تجوید</label>
-              <select id="add-teacherTajweed" class="field">
-                <option value="">— هیچ —</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- ردیف ٩: تێبینی -->
-          <div>
-            <label class="block text-xs text-muted mb-1.5">تێبینی</label>
-            <textarea id="add-notes" class="field" rows="3" placeholder="هەر تێبینییەک..."></textarea>
-          </div>
-
-        </div>
+        <button class="btn-ghost text-sm mt-4 w-full border border-dashed border-white/20 py-2 rounded-lg"
+                onclick="addStudentEntry()">+ زیادکردنی قوتابییەکی تر</button>
 
         <p id="add-err" class="text-sm text-danger hidden mt-4"></p>
-        <button class="btn-primary full mt-5" id="add-btn" onclick="submitAddStudent()">تۆمارکردن و ناردن بۆ بازنەی سێتوان</button>
+        <button class="btn-primary full mt-4" id="add-btn" onclick="submitAddStudent()">پاشەکەوتکردنی هەمووی</button>
       </div>
     </div>
 
@@ -471,94 +341,15 @@
     <div id="t-add-teacher" class="view">
       <div class="card p-6 max-w-2xl mx-auto">
         <div class="sh"><span class="text-gold font-semibold">زیادکردنی مامۆستای نوێ</span></div>
-        <p class="text-muted text-sm mb-6">خانەکانی ئەستێرەدار <span class="text-danger">*</span> پێویستە پڕ بکرێنەوە.</p>
+        <p class="text-muted text-sm mb-4">دەتوانیت چەندین مامۆستا زیاد بکەیت بە یەک پاشەکەوتکردن.</p>
 
-        <div class="space-y-5">
+        <div id="teacher-entries" class="space-y-4"></div>
 
-          <!-- ناو + موبایل -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs text-muted mb-1.5">ناوی تەواو <span class="text-danger">*</span></label>
-              <input id="at-name" class="field" type="text" placeholder="ناوی مامۆستا..." autocomplete="off"/>
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1.5">ژمارەی موبایل <span class="text-danger">*</span></label>
-              <input id="at-phone" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
-            </div>
-          </div>
-
-          <!-- ناونیشان + پیشە -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs text-muted mb-1.5">ناونیشان</label>
-              <input id="at-address" class="field" type="text" placeholder="گەڕەک، شار..."/>
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1.5">پیشە</label>
-              <input id="at-job" class="field" type="text" placeholder="مامۆستا، ئیمام..."/>
-            </div>
-          </div>
-
-          <!-- موجاز -->
-          <div>
-            <label class="block text-xs text-muted mb-2">موجاز هەیە؟</label>
-            <div class="flex gap-4">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="at-ijaza" value="بەڵێ" class="accent-gold" onchange="atToggleIjaza(true)"/>
-                <span class="text-sm text-cream">بەڵێ</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="at-ijaza" value="نەخێر" class="accent-gold" checked onchange="atToggleIjaza(false)"/>
-                <span class="text-sm text-cream">نەخێر</span>
-              </label>
-            </div>
-            <input id="at-ijaza-detail" class="field hidden mt-2" type="text" placeholder="بەرامبەر موجاز..."/>
-          </div>
-
-          <!-- مامۆستای وانە -->
-          <div>
-            <label class="block text-xs text-muted mb-2">مامۆستای وانە</label>
-            <div class="space-y-3">
-
-              <!-- تجوید -->
-              <div class="bg-mid/30 rounded-lg p-3">
-                <label class="flex items-center gap-2 cursor-pointer mb-2">
-                  <input type="checkbox" id="at-tajweed-check" class="accent-gold" onchange="atToggleSubject('tajweed')"/>
-                  <span class="text-sm text-cream font-medium">تجوید</span>
-                </label>
-                <div id="at-tajweed-stages" class="hidden pr-5">
-                  <label class="block text-xs text-muted mb-1">قۆناغی چەند؟</label>
-                  <input id="at-tajweed-stage" class="field" type="text" placeholder="قۆناغی ١، ٢..."/>
-                </div>
-              </div>
-
-              <!-- پەروەردە -->
-              <div class="bg-mid/30 rounded-lg p-3">
-                <label class="flex items-center gap-2 cursor-pointer mb-2">
-                  <input type="checkbox" id="at-edu-check" class="accent-gold" onchange="atToggleSubject('edu')"/>
-                  <span class="text-sm text-cream font-medium">پەروەردە</span>
-                </label>
-                <div id="at-edu-stages" class="hidden pr-5">
-                  <label class="block text-xs text-muted mb-1">قۆناغی چەند؟</label>
-                  <input id="at-edu-stage" class="field" type="text" placeholder="قۆناغی ١، ٢..."/>
-                </div>
-              </div>
-
-              <!-- قورئان -->
-              <div class="bg-mid/30 rounded-lg p-3">
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" id="at-quran-check" class="accent-gold"/>
-                  <span class="text-sm text-cream font-medium">قورئان</span>
-                </label>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
+        <button class="btn-ghost text-sm mt-4 w-full border border-dashed border-white/20 py-2 rounded-lg"
+                onclick="addTeacherEntry()">+ زیادکردنی مامۆستایەکی تر</button>
 
         <p id="at-err" class="text-sm text-danger hidden mt-4"></p>
-        <button class="btn-primary full mt-5" id="at-btn" onclick="submitAddTeacher()">تۆمارکردنی مامۆستا</button>
+        <button class="btn-primary full mt-4" id="at-btn" onclick="submitAddTeacher()">پاشەکەوتکردنی هەمووی</button>
       </div>
     </div>
 
@@ -889,103 +680,151 @@ function toggleIllness(show) {
   if (!show) el.value = '';
 }
 
+// ── Multi-entry: قوتابی ──
+let _studentEntryCount = 0;
+
+function makeTeacherOptions() {
+  return '<option value="">— هیچ —</option>' +
+    DB.teachers.map(t => `<option value="${esc(t.fullName)}">${t.fullName}</option>`).join('');
+}
+
+function addStudentEntry() {
+  const id = ++_studentEntryCount;
+  const div = document.createElement('div');
+  div.id = `se-${id}`;
+  div.className = 'card-inner p-4 space-y-3 relative';
+  div.innerHTML = `
+    <button onclick="document.getElementById('se-${id}').remove()" class="absolute top-2 left-2 text-muted hover:text-danger text-xs">✕</button>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs text-muted mb-1">ناوی قوتابی <span class="text-danger">*</span></label>
+        <input id="se-name-${id}" class="field" type="text" placeholder="ناوی تەواو" autocomplete="off"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">موبایلی سەرپەرەشتیار <span class="text-danger">*</span></label>
+        <input id="se-phone-${id}" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div>
+        <label class="block text-xs text-muted mb-1">مامۆستای قورئان</label>
+        <select id="se-tq-${id}" class="field">${makeTeacherOptions()}</select>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">مامۆستای پەروەردە</label>
+        <select id="se-te-${id}" class="field">${makeTeacherOptions()}</select>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">مامۆستای تجوید</label>
+        <select id="se-tt-${id}" class="field">${makeTeacherOptions()}</select>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs text-muted mb-1">تەمەن</label>
+        <input id="se-age-${id}" class="field" type="number" placeholder="١٢" min="4" max="25"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">گەڕەک</label>
+        <input id="se-nbr-${id}" class="field" type="text" placeholder="گەڕەکی..."/>
+      </div>
+    </div>
+  `;
+  document.getElementById('student-entries').appendChild(div);
+}
+
 async function submitAddStudent() {
   const errEl = document.getElementById('add-err');
   const btn   = document.getElementById('add-btn');
   errEl.classList.add('hidden');
 
-  // خانەی پێویست
-  const name  = document.getElementById('add-name').value.trim();
-  const phone = document.getElementById('add-phone').value.trim();
-
-  if (!name)  { errEl.textContent = 'ناوی قوتابی پێویستە.'; errEl.classList.remove('hidden'); document.getElementById('add-name').focus(); return; }
-  if (!phone) { errEl.textContent = 'ژمارەی موبایلی سەرپەرەشتیار پێویستە.'; errEl.classList.remove('hidden'); document.getElementById('add-phone').focus(); return; }
-  if (!/^07\d{9}$/.test(phone)) { errEl.textContent = 'ژمارەی مۆبایل دروست نییە. نموونە: 07701234567'; errEl.classList.remove('hidden'); return; }
-
-  if (findStudent(name)) {
-    errEl.textContent = 'ئەم ناوە پێشتر تۆمارکراوە.'; errEl.classList.remove('hidden'); return;
+  // کۆکردنەوەی هەموو ئەنتریەکان
+  const entries = document.querySelectorAll('#student-entries > div');
+  if (entries.length === 0) {
+    errEl.textContent = 'تکایە لانی کەم قوتابییەک زیاد بکە.';
+    errEl.classList.remove('hidden'); return;
   }
 
-  // کۆکردنەوەی هەموو خانەکان
-  const illnessRadio   = document.querySelector('input[name="add-illness"]:checked');
-  const financialRadio = document.querySelector('input[name="add-financial"]:checked');
-  const illnessVal     = illnessRadio ? illnessRadio.value : 'نیەتی';
-  const illnessDetail  = illnessVal === 'هەیەتی' ? document.getElementById('add-illnessDetail').value.trim() : '';
-
-  const juz = [];
-  if (document.getElementById('add-juz-amma').checked)    juz.push('جوزئی عم');
-  if (document.getElementById('add-juz-tabarak').checked) juz.push('جوزئی تبارک');
-  if (document.getElementById('add-juz-khatm').checked)   juz.push('ختم');
-
-  const payload = {
-    fullName:         name,
-    phone:            phone,
-    age:              document.getElementById('add-age').value.trim(),
-    fatherJob:        document.getElementById('add-fatherJob').value.trim(),
-    financialStatus:  financialRadio ? financialRadio.value : '',
-    neighborhood:     document.getElementById('add-neighborhood').value.trim(),
-    landmark:         document.getElementById('add-landmark').value.trim(),
-    illness:          illnessVal,
-    illnessDetail:    illnessDetail,
-    educationLevel:   document.getElementById('add-educationLevel').value.trim(),
-    studentLevel:     document.getElementById('add-studentLevel').value,
-    memorization:     juz,
-    teacherQuran:     document.getElementById('add-teacherQuran').value.trim(),
-    teacherEducation: document.getElementById('add-teacherEducation').value.trim(),
-    teacherTajweed:   document.getElementById('add-teacherTajweed').value.trim(),
-    notes:            document.getElementById('add-notes').value.trim(),
-    // فیلدە کۆنەکان بەتاڵ دەمێنن
-    birthYear: '', classGroup: '', parentName: '',
-    grades: {}, attendance: [], culturalNotes: [], behavioralNotes: [],
-  };
+  const list = [];
+  for (const div of entries) {
+    const id = div.id.replace('se-', '');
+    const name  = document.getElementById(`se-name-${id}`)?.value.trim() || '';
+    const phone = document.getElementById(`se-phone-${id}`)?.value.trim() || '';
+    if (!name || !phone) {
+      errEl.textContent = 'ناو و موبایل بۆ هەموو قوتابییەکان پێویستن.';
+      errEl.classList.remove('hidden'); return;
+    }
+    if (!/^07\d{9}$/.test(phone)) {
+      errEl.textContent = `ژمارەی ${name} هەڵەیە. نموونە: 07701234567`;
+      errEl.classList.remove('hidden'); return;
+    }
+    list.push({
+      fullName: name, phone,
+      age:              document.getElementById(`se-age-${id}`)?.value.trim() || '',
+      neighborhood:     document.getElementById(`se-nbr-${id}`)?.value.trim() || '',
+      teacherQuran:     document.getElementById(`se-tq-${id}`)?.value || '',
+      teacherEducation: document.getElementById(`se-te-${id}`)?.value || '',
+      teacherTajweed:   document.getElementById(`se-tt-${id}`)?.value || '',
+      illness: 'نیەتی', birthYear: '', classGroup: '', parentName: '',
+    });
+  }
 
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin" style="margin-left:.4rem"></span> تۆمارکردن...';
+  btn.innerHTML = '<span class="spin" style="margin-left:.4rem"></span> پاشەکەوتکردن...';
 
   try {
-    await apiCall('/api/student', 'POST', payload);
+    const res = await apiCall('/api/students/batch', 'POST', { list });
     await loadDB();
-
-    // ڕیسێتی فۆرم
-    ['add-name','add-age','add-phone','add-fatherJob','add-neighborhood',
-     'add-landmark','add-illnessDetail','add-educationLevel',
-     'add-teacherQuran','add-teacherEducation','add-teacherTajweed','add-notes']
-      .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-    document.getElementById('add-studentLevel').value = '';
-    ['add-juz-amma','add-juz-tabarak','add-juz-khatm'].forEach(id => {
-      document.getElementById(id).checked = false;
-    });
-    const illNone = document.querySelector('input[name="add-illness"][value="نیەتی"]');
-    if (illNone) { illNone.checked = true; toggleIllness(false); }
-    document.querySelectorAll('input[name="add-financial"]').forEach(r => r.checked = false);
-
+    document.getElementById('student-entries').innerHTML = '';
+    _studentEntryCount = 0;
     renderAllStudents();
-    toast(`${name} تۆمارکرا ✓`);
+    const msg = res.skipped?.length
+      ? `${res.added} تۆمارکرا ✓ — ${res.skipped.length} تەکراری بوون: ${res.skipped.join('، ')}`
+      : `${res.added} قوتابی تۆمارکران ✓`;
+    toast(msg);
     tTab('t-list');
   } catch(e) {
-    errEl.textContent = 'هەڵە لە تۆمارکردن: ' + e.message;
+    errEl.textContent = 'هەڵە: ' + e.message;
     errEl.classList.remove('hidden');
   }
-
   btn.disabled = false;
-  btn.textContent = 'تۆمارکردن و ناردن بۆ بازنەی سێتوان';
+  btn.textContent = 'پاشەکەوتکردنی هەمووی';
 }
 
 // ══════════════════════════════════════════════
-//  زیادکردنی مامۆستا (تەنها ئەدمین)
+//  زیادکردنی مامۆستا (تەنها ئەدمین) — Multi-entry
 // ══════════════════════════════════════════════
-function atToggleIjaza(show) {
-  document.getElementById('at-ijaza-detail').classList.toggle('hidden', !show);
-  if (!show) document.getElementById('at-ijaza-detail').value = '';
-}
+let _teacherEntryCount = 0;
 
-function atToggleSubject(type) {
-  const stagesMap = { tajweed: 'at-tajweed-stages', edu: 'at-edu-stages' };
-  const checkMap  = { tajweed: 'at-tajweed-check', edu: 'at-edu-check' };
-  if (!stagesMap[type]) return;
-  const checked = document.getElementById(checkMap[type]).checked;
-  document.getElementById(stagesMap[type]).classList.toggle('hidden', !checked);
-  if (!checked) document.getElementById(stagesMap[type]).querySelector('input').value = '';
+function addTeacherEntry() {
+  const id = ++_teacherEntryCount;
+  const div = document.createElement('div');
+  div.id = `te-${id}`;
+  div.className = 'card-inner p-4 space-y-3 relative';
+  div.innerHTML = `
+    <button onclick="document.getElementById('te-${id}').remove()" class="absolute top-2 left-2 text-muted hover:text-danger text-xs">✕</button>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs text-muted mb-1">ناوی تەواو <span class="text-danger">*</span></label>
+        <input id="te-name-${id}" class="field" type="text" placeholder="ناوی مامۆستا..." autocomplete="off"/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">ژمارەی موبایل <span class="text-danger">*</span></label>
+        <input id="te-phone-${id}" class="field" type="tel" placeholder="07701234567" maxlength="11" dir="ltr"/>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs text-muted mb-1">ناونیشان</label>
+        <input id="te-addr-${id}" class="field" type="text" placeholder="گەڕەک، شار..."/>
+      </div>
+      <div>
+        <label class="block text-xs text-muted mb-1">پیشە</label>
+        <input id="te-job-${id}" class="field" type="text" placeholder="مامۆستا، ئیمام..."/>
+      </div>
+    </div>
+  `;
+  document.getElementById('teacher-entries').appendChild(div);
 }
 
 async function submitAddTeacher() {
@@ -993,54 +832,45 @@ async function submitAddTeacher() {
   const btn   = document.getElementById('at-btn');
   errEl.classList.add('hidden');
 
-  const name  = document.getElementById('at-name').value.trim();
-  const phone = document.getElementById('at-phone').value.trim();
+  const entries = document.querySelectorAll('#teacher-entries > div');
+  if (entries.length === 0) {
+    errEl.textContent = 'تکایە لانی کەم مامۆستایەک زیاد بکە.';
+    errEl.classList.remove('hidden'); return;
+  }
 
-  if (!name)  { errEl.textContent = 'ناوی مامۆستا پێویستە.'; errEl.classList.remove('hidden'); return; }
-  if (!phone) { errEl.textContent = 'ژمارەی موبایل پێویستە.'; errEl.classList.remove('hidden'); return; }
-  if (!/^07\d{9}$/.test(phone)) { errEl.textContent = 'ژمارەی مۆبایل دروست نییە. نموونە: 07701234567'; errEl.classList.remove('hidden'); return; }
-
-  // کۆکردنەوەی بابەتەکان
-  const subjects = [];
-  if (document.getElementById('at-quran-check').checked)
-    subjects.push({ name: 'قورئان' });
-  if (document.getElementById('at-tajweed-check').checked)
-    subjects.push({ name: 'تجوید', stage: document.getElementById('at-tajweed-stage').value.trim() });
-  if (document.getElementById('at-edu-check').checked)
-    subjects.push({ name: 'پەروەردە', stage: document.getElementById('at-edu-stage').value.trim() });
-
-  const ijazaRadio = document.querySelector('input[name="at-ijaza"]:checked');
-  const ijaza      = ijazaRadio ? ijazaRadio.value : 'نەخێر';
-  const ijazaDetail = ijaza === 'بەڵێ' ? document.getElementById('at-ijaza-detail').value.trim() : '';
-
-  const payload = {
-    fullName:    name,
-    phone,
-    address:     document.getElementById('at-address').value.trim(),
-    job:         document.getElementById('at-job').value.trim(),
-    ijaza,
-    ijazaDetail,
-    subjects,
-    assignedClasses: [],
-    students: [],
-  };
+  const list = [];
+  for (const div of entries) {
+    const id = div.id.replace('te-', '');
+    const name  = document.getElementById(`te-name-${id}`)?.value.trim() || '';
+    const phone = document.getElementById(`te-phone-${id}`)?.value.trim() || '';
+    if (!name || !phone) {
+      errEl.textContent = 'ناو و موبایل بۆ هەموو مامۆستایەکان پێویستن.';
+      errEl.classList.remove('hidden'); return;
+    }
+    if (!/^07\d{9}$/.test(phone)) {
+      errEl.textContent = `ژمارەی ${name} هەڵەیە. نموونە: 07701234567`;
+      errEl.classList.remove('hidden'); return;
+    }
+    list.push({
+      fullName: name, phone,
+      address: document.getElementById(`te-addr-${id}`)?.value.trim() || '',
+      job:     document.getElementById(`te-job-${id}`)?.value.trim() || '',
+      ijaza: 'نەخێر', ijazaDetail: '', subjects: [], assignedClasses: [], students: [],
+    });
+  }
 
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin" style="margin-left:.4rem"></span> تۆمارکردن...';
+  btn.innerHTML = '<span class="spin" style="margin-left:.4rem"></span> پاشەکەوتکردن...';
 
   try {
-    await apiCall('/api/teacher', 'POST', payload);
+    const res = await apiCall('/api/teachers/batch', 'POST', { list });
     await loadDB();
-    // ڕیسێت
-    ['at-name','at-phone','at-address','at-job','at-ijaza-detail','at-tajweed-stage','at-edu-stage']
-      .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-    ['at-tajweed-check','at-edu-check','at-quran-check']
-      .forEach(id => { document.getElementById(id).checked = false; });
-    ['at-tajweed-stages','at-edu-stages','at-ijaza-detail']
-      .forEach(id => { document.getElementById(id).classList.add('hidden'); });
-    const ijazaNo = document.querySelector('input[name="at-ijaza"][value="نەخێر"]');
-    if (ijazaNo) ijazaNo.checked = true;
-    toast(`${name} تۆمارکرا ✓`);
+    document.getElementById('teacher-entries').innerHTML = '';
+    _teacherEntryCount = 0;
+    const msg = res.skipped?.length
+      ? `${res.added} تۆمارکرا ✓ — ${res.skipped.length} تەکراری بوون: ${res.skipped.join('، ')}`
+      : `${res.added} مامۆستا تۆمارکران ✓`;
+    toast(msg);
     tTab('t-home');
   } catch(e) {
     errEl.textContent = 'هەڵە: ' + e.message;
@@ -1048,7 +878,7 @@ async function submitAddTeacher() {
   }
 
   btn.disabled = false;
-  btn.textContent = 'تۆمارکردنی مامۆستا';
+  btn.textContent = 'پاشەکەوتکردنی هەمووی';
 }
 
 // ══════════════════════════════════════════════
