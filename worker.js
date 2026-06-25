@@ -1,11 +1,17 @@
 // ══════════════════════════════════════════════
-//  Hikma Worker — KV + GitHub Archive
-//  KV: HIKMA_KV
-//  keys: "students"  → JSON array
-//        "teachers"  → JSON array
-//        "blacklist" → JSON array
+//  Hikma Worker — GitHub Primary + KV for attendance/grades
+//  GitHub files:
+//    students.json   → لیستی قوتابیان (سەرەکی)
+//    teachers.json   → لیستی مامۆستایان (سەرەکی)
+//    archive-data.json → غیابات، نمرە، blacklist (هەفتانە)
+//  KV keys:
+//    "attendance"  → { studentName: [...logs] }
+//    "grades"      → { studentName: { subj: {q1,q2,final} } }
+//    "blacklist"   → JSON array
+//    "lastLesson"  → { studentName: { quran, tajweed, edu } }
+//    "notes"       → { studentName: [...notes] }
 //  Secrets: GH_TOKEN
-//  Cron: every Sunday 22:00 UTC (01:00 Iraq)
+//  Cron: every Sunday 22:00 UTC
 // ══════════════════════════════════════════════
 
 const CORS = {
@@ -14,8 +20,7 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-const GH_REPO  = "setwann/hikma";
-const GH_FILE  = "archive-data.json";
+const GH_REPO   = "setwann/hikma";
 const GH_BRANCH = "main";
 
 function json(data, status = 200) {
@@ -25,43 +30,42 @@ function json(data, status = 200) {
   });
 }
 
+// ── KV helpers ──
 async function getKV(env, key) {
   const val = await env.HIKMA_KV.get(key);
   return val ? JSON.parse(val) : null;
 }
-
 async function putKV(env, key, data) {
   await env.HIKMA_KV.put(key, JSON.stringify(data));
 }
-
 async function deleteKV(env, key) {
   await env.HIKMA_KV.delete(key);
 }
 
-// ── GitHub: دۆزینەوەی SHA ی فایلی ئێسستا ──
-async function getGHFileSHA(env) {
+// ── GitHub: خوێندنەوەی فایل ──
+async function ghRead(env, filename) {
   const res = await fetch(
-    `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}`,
+    `https://api.github.com/repos/${GH_REPO}/contents/${filename}?ref=${GH_BRANCH}`,
     { headers: { Authorization: `Bearer ${env.GH_TOKEN}`, "User-Agent": "hikma-worker" } }
   );
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub GET failed: ${res.status}`);
+  if (!res.ok) throw new Error(`GitHub GET ${filename} failed: ${res.status}`);
   const data = await res.json();
-  return data.sha || null;
+  const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
+  return { data: JSON.parse(decoded), sha: data.sha };
 }
 
-// ── GitHub: نووسینەوەی فایلی ئەرشیف ──
-async function writeArchiveToGH(env, content) {
-  const sha = await getGHFileSHA(env);
+// ── GitHub: نووسینەوەی فایل ──
+async function ghWrite(env, filename, content, sha) {
   const body = {
-    message: `archive: ${new Date().toISOString()}`,
+    message: `update: ${filename} ${new Date().toISOString()}`,
     content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
     branch: GH_BRANCH,
   };
-  if (sha) body.sha = sha; // نوێکردنەوە — پێویستی بە SHA هەیە
+  if (sha) body.sha = sha;
 
   const res = await fetch(
-    `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`,
+    `https://api.github.com/repos/${GH_REPO}/contents/${filename}`,
     {
       method: "PUT",
       headers: {
@@ -74,45 +78,63 @@ async function writeArchiveToGH(env, content) {
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`GitHub PUT failed: ${res.status} — ${err.message || ""}`);
+    throw new Error(`GitHub PUT ${filename} failed: ${res.status} — ${err.message || ""}`);
   }
+  const result = await res.json();
+  return result.content?.sha || null;
 }
 
-// ── GitHub: خوێندنەوەی فایلی ئەرشیف ──
-async function readArchiveFromGH(env) {
-  const res = await fetch(
-    `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}`,
-    { headers: { Authorization: `Bearer ${env.GH_TOKEN}`, "User-Agent": "hikma-worker" } }
-  );
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub GET failed: ${res.status}`);
-  const data = await res.json();
-  const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
-  return JSON.parse(decoded);
+// ── students.json helpers ──
+async function readStudents(env) {
+  const r = await ghRead(env, "students.json");
+  return r ? { list: r.data, sha: r.sha } : { list: [], sha: null };
+}
+
+async function writeStudents(env, list, sha) {
+  return ghWrite(env, "students.json", list, sha);
+}
+
+// ── teachers.json helpers ──
+async function readTeachers(env) {
+  const r = await ghRead(env, "teachers.json");
+  return r ? { list: r.data, sha: r.sha } : { list: [], sha: null };
+}
+
+async function writeTeachers(env, list, sha) {
+  return ghWrite(env, "teachers.json", list, sha);
 }
 
 // ══════════════════════════════════════════════
-//  ئەرشیفکردنی هەفتانە
+//  ئەرشیفکردنی هەفتانە (KV → archive-data.json)
+//  قوتابی و مامۆستا دەست نادات
 // ══════════════════════════════════════════════
 async function runWeeklyArchive(env) {
-  const students  = (await getKV(env, "students"))  || [];
-  const teachers  = (await getKV(env, "teachers"))  || [];
-  const blacklist = (await getKV(env, "blacklist")) || [];
+  const attendance = (await getKV(env, "attendance")) || {};
+  const grades     = (await getKV(env, "grades"))     || {};
+  const blacklist  = (await getKV(env, "blacklist"))  || [];
+  const lastLesson = (await getKV(env, "lastLesson")) || {};
+  const notes      = (await getKV(env, "notes"))      || {};
+
+  const existing = await ghRead(env, "archive-data.json");
+  const sha = existing ? existing.sha : null;
 
   const archive = {
     archivedAt: new Date().toISOString(),
-    students,
-    teachers,
+    attendance,
+    grades,
     blacklist,
+    lastLesson,
+    notes,
   };
 
-  // ١. بنووسە بۆ GitHub
-  await writeArchiveToGH(env, archive);
+  await ghWrite(env, "archive-data.json", archive, sha);
 
-  // ٢. KV بەتاڵ بکەوە
-  await deleteKV(env, "students");
-  await deleteKV(env, "teachers");
+  // KV بەتاڵ بکەوە
+  await deleteKV(env, "attendance");
+  await deleteKV(env, "grades");
   await deleteKV(env, "blacklist");
+  await deleteKV(env, "lastLesson");
+  await deleteKV(env, "notes");
 }
 
 // ══════════════════════════════════════════════
@@ -120,7 +142,6 @@ async function runWeeklyArchive(env) {
 // ══════════════════════════════════════════════
 export default {
 
-  // ── Cron Trigger: هەر یەکشەممە ٢٢:٠٠ UTC ──
   async scheduled(event, env, ctx) {
     ctx.waitUntil(runWeeklyArchive(env));
   },
@@ -134,64 +155,24 @@ export default {
 
     try {
 
-      // ── GET /api/data ── هەموو داتا (KV + GitHub)
+      // ── GET /api/data ── هەموو داتا لە GitHub
       if (method === "GET" && path === "/api/data") {
-        const kvStudents = (await getKV(env, "students")) || [];
-        const kvTeachers = (await getKV(env, "teachers")) || [];
-
-        // هەردووکی بخوێنەوە و یەکیان بکەوە
-        let ghStudents = [];
-        let ghTeachers = [];
-        try {
-          const archive = await readArchiveFromGH(env);
-          if (archive) {
-            ghStudents = archive.students  || [];
-            ghTeachers = archive.teachers  || [];
-          }
-        } catch (_) {
-          // ئەگەر GitHub نەگەیشت، KV بەتەنها بەکاردێت
-        }
-
-        // یەکخستن: KV سەرەکییە، GitHub تەنها زیادی دەکات ئەگەر ناو تەکرار نەبێت
-        const mergeByName = (kvArr, ghArr) => {
-          const names = new Set(kvArr.map(x => x.fullName));
-          const extra = ghArr.filter(x => !names.has(x.fullName));
-          return [...kvArr, ...extra];
-        };
-
-        const students = mergeByName(kvStudents, ghStudents);
-        const teachers = mergeByName(kvTeachers, ghTeachers);
-
-        return json({ teachers, students });
+        const [studentsRes, teachersRes] = await Promise.all([
+          readStudents(env),
+          readTeachers(env),
+        ]);
+        return json({ students: studentsRes.list, teachers: teachersRes.list });
       }
 
-      // ── GET /api/archive ── خوێندنەوەی ئەرشیف لە GitHub
-      if (method === "GET" && path === "/api/archive") {
-        const archive = await readArchiveFromGH(env);
-        if (!archive) return json({ archive: null });
-        return json({ archive });
-      }
-
-      // ── POST /api/restore ── گەڕاندنەوەی داتا لە ئەرشیف بۆ KV
-      if (method === "POST" && path === "/api/restore") {
-        const archive = await readArchiveFromGH(env);
-        if (!archive) return json({ error: "ئەرشیف نەدۆزرایەوە" }, 404);
-
-        await putKV(env, "students",  archive.students  || []);
-        await putKV(env, "teachers",  archive.teachers  || []);
-        await putKV(env, "blacklist", archive.blacklist || []);
-        return json({ ok: true, restoredAt: archive.archivedAt });
-      }
-
-      // POST /api/student
+      // ── POST /api/student ── زیادکردن بۆ students.json
       if (method === "POST" && path === "/api/student") {
         const body = await request.json();
         const { fullName, phone } = body;
         if (!fullName || !phone)
           return json({ error: "ناو و تەلەفۆن پێویستن" }, 400);
 
-        const students = (await getKV(env, "students")) || [];
-        if (students.some(s => s.fullName === fullName))
+        const { list, sha } = await readStudents(env);
+        if (list.some(s => s.fullName === fullName))
           return json({ error: "ئەم ناوە پێشتر تۆمارکراوە" }, 409);
 
         const newStudent = {
@@ -204,63 +185,104 @@ export default {
           teacherQuran: body.teacherQuran || "", teacherEducation: body.teacherEducation || "",
           teacherTajweed: body.teacherTajweed || "", notes: body.notes || "",
           birthYear: "", classGroup: "", parentName: "",
-          grades: {}, attendance: [], culturalNotes: [], behavioralNotes: [],
         };
 
-        students.push(newStudent);
-        await putKV(env, "students", students);
+        list.push(newStudent);
+        await writeStudents(env, list, sha);
         return json({ ok: true });
       }
 
-      // PUT /api/student
+      // ── PUT /api/student ── نوێکردنەوە لە students.json
       if (method === "PUT" && path === "/api/student") {
         const body = await request.json();
         if (!body.fullName) return json({ error: "ناو پێویستە" }, 400);
 
-        const students = (await getKV(env, "students")) || [];
-        const idx = students.findIndex(s => s.fullName === body.fullName);
-        if (idx === -1) return json({ error: "قوتابی نەدۆزرایەوە" }, 404);
+        // فیلدە KV-یەکان جیا بکەرەوە
+        const { attendance, grades, lastLesson, culturalNotes, behavioralNotes, ...studentFields } = body;
 
-        students[idx] = { ...students[idx], ...body };
-        await putKV(env, "students", students);
+        // students.json نوێ بکەوە
+        const { list, sha } = await readStudents(env);
+        const idx = list.findIndex(s => s.fullName === body.fullName);
+        if (idx === -1) return json({ error: "قوتابی نەدۆزرایەوە" }, 404);
+        list[idx] = { ...list[idx], ...studentFields };
+        await writeStudents(env, list, sha);
+
+        // ئەگەر غیابات هاتن، KV نوێ بکەوە
+        if (attendance !== undefined) {
+          const allAtt = (await getKV(env, "attendance")) || {};
+          allAtt[body.fullName] = attendance;
+          await putKV(env, "attendance", allAtt);
+        }
+        // ئەگەر نمرەکان هاتن
+        if (grades !== undefined) {
+          const allGrades = (await getKV(env, "grades")) || {};
+          allGrades[body.fullName] = grades;
+          await putKV(env, "grades", allGrades);
+        }
+        // ئەگەر درسەکان هاتن
+        if (lastLesson !== undefined) {
+          const allLessons = (await getKV(env, "lastLesson")) || {};
+          allLessons[body.fullName] = lastLesson;
+          await putKV(env, "lastLesson", allLessons);
+        }
+        // ئەگەر تێبینییەکان هاتن
+        const newNotes = [...(culturalNotes || []), ...(behavioralNotes || [])];
+        if (newNotes.length > 0) {
+          const allNotes = (await getKV(env, "notes")) || {};
+          allNotes[body.fullName] = newNotes;
+          await putKV(env, "notes", allNotes);
+        }
+
         return json({ ok: true });
       }
 
-      // DELETE /api/student
+      // ── DELETE /api/student ──
       if (method === "DELETE" && path === "/api/student") {
         const { fullName } = await request.json();
         if (!fullName) return json({ error: "ناو پێویستە" }, 400);
 
-        let students = (await getKV(env, "students")) || [];
-        const before = students.length;
-        students = students.filter(s => s.fullName !== fullName);
-        if (students.length === before)
+        const { list, sha } = await readStudents(env);
+        const filtered = list.filter(s => s.fullName !== fullName);
+        if (filtered.length === list.length)
           return json({ error: "قوتابی نەدۆزرایەوە" }, 404);
+        await writeStudents(env, filtered, sha);
 
-        const teachers = (await getKV(env, "teachers")) || [];
-        const updatedTeachers = teachers.map(t => ({
+        // KV پاک بکەوە
+        const allAtt  = (await getKV(env, "attendance"))  || {};
+        const allGr   = (await getKV(env, "grades"))      || {};
+        const allLes  = (await getKV(env, "lastLesson"))  || {};
+        const allNotes= (await getKV(env, "notes"))        || {};
+        delete allAtt[fullName]; delete allGr[fullName];
+        delete allLes[fullName]; delete allNotes[fullName];
+        await putKV(env, "attendance", allAtt);
+        await putKV(env, "grades",     allGr);
+        await putKV(env, "lastLesson", allLes);
+        await putKV(env, "notes",      allNotes);
+
+        // teachers.json نوێ بکەوە
+        const { list: tList, sha: tSha } = await readTeachers(env);
+        const updatedTeachers = tList.map(t => ({
           ...t,
           students: (t.students || []).filter(s => s.fullName !== fullName),
         }));
+        await writeTeachers(env, updatedTeachers, tSha);
 
-        const blacklist = (await getKV(env, "blacklist")) || [];
-        const updatedBlacklist = blacklist.filter(b => b.studentName !== fullName);
+        // blacklist
+        const bl = (await getKV(env, "blacklist")) || [];
+        await putKV(env, "blacklist", bl.filter(b => b.studentName !== fullName));
 
-        await putKV(env, "students", students);
-        await putKV(env, "teachers", updatedTeachers);
-        await putKV(env, "blacklist", updatedBlacklist);
         return json({ ok: true });
       }
 
-      // POST /api/teacher
+      // ── POST /api/teacher ── زیادکردن بۆ teachers.json
       if (method === "POST" && path === "/api/teacher") {
         const body = await request.json();
         const { fullName, phone } = body;
         if (!fullName || !phone)
           return json({ error: "ناو و تەلەفۆن پێویستن" }, 400);
 
-        const teachers = (await getKV(env, "teachers")) || [];
-        if (teachers.some(t => t.fullName === fullName))
+        const { list, sha } = await readTeachers(env);
+        if (list.some(t => t.fullName === fullName))
           return json({ error: "ئەم ناوە پێشتر تۆمارکراوە" }, 409);
 
         const newTeacher = {
@@ -271,65 +293,61 @@ export default {
           students: [],
         };
 
-        teachers.push(newTeacher);
-        await putKV(env, "teachers", teachers);
+        list.push(newTeacher);
+        await writeTeachers(env, list, sha);
         return json({ ok: true });
       }
 
-      // PUT /api/teacher
+      // ── PUT /api/teacher ──
       if (method === "PUT" && path === "/api/teacher") {
         const body = await request.json();
         if (!body.fullName) return json({ error: "ناو پێویستە" }, 400);
 
-        const teachers = (await getKV(env, "teachers")) || [];
-        const idx = teachers.findIndex(t => t.fullName === body.fullName);
+        const { list, sha } = await readTeachers(env);
+        const idx = list.findIndex(t => t.fullName === body.fullName);
         if (idx === -1) return json({ error: "مامۆستا نەدۆزرایەوە" }, 404);
-
-        teachers[idx] = { ...teachers[idx], ...body };
-        await putKV(env, "teachers", teachers);
+        list[idx] = { ...list[idx], ...body };
+        await writeTeachers(env, list, sha);
         return json({ ok: true });
       }
 
-      // DELETE /api/teacher
+      // ── DELETE /api/teacher ──
       if (method === "DELETE" && path === "/api/teacher") {
         const { fullName } = await request.json();
         if (!fullName) return json({ error: "ناو پێویستە" }, 400);
 
-        let teachers = (await getKV(env, "teachers")) || [];
-        const before = teachers.length;
-        teachers = teachers.filter(t => t.fullName !== fullName);
-        if (teachers.length === before)
+        const { list, sha } = await readTeachers(env);
+        const filtered = list.filter(t => t.fullName !== fullName);
+        if (filtered.length === list.length)
           return json({ error: "مامۆستا نەدۆزرایەوە" }, 404);
-
-        await putKV(env, "teachers", teachers);
+        await writeTeachers(env, filtered, sha);
         return json({ ok: true });
       }
 
-      // POST /api/accept
+      // ── POST /api/accept ──
       if (method === "POST" && path === "/api/accept") {
         const { teacherName, studentName, subject } = await request.json();
         if (!teacherName || !studentName)
           return json({ error: "زانیاری ناتەواو" }, 400);
 
-        const teachers = (await getKV(env, "teachers")) || [];
-        const idx = teachers.findIndex(t => t.fullName === teacherName);
+        const { list, sha } = await readTeachers(env);
+        const idx = list.findIndex(t => t.fullName === teacherName);
         if (idx === -1) return json({ error: "مامۆستا نەدۆزرایەوە" }, 404);
 
-        const already = (teachers[idx].students || []).some(
+        const already = (list[idx].students || []).some(
           s => s.fullName === studentName && ((s.subject || "") === (subject || ""))
         );
         if (already) return json({ error: "قوتابی پێشتر بۆ ئەم بەشە قبووڵکراوە" }, 409);
 
-        teachers[idx].students = [
-          ...(teachers[idx].students || []),
+        list[idx].students = [
+          ...(list[idx].students || []),
           { fullName: studentName, subject: subject || "", acceptedAt: new Date().toISOString() },
         ];
-
-        await putKV(env, "teachers", teachers);
+        await writeTeachers(env, list, sha);
         return json({ ok: true });
       }
 
-      // POST /api/transfer
+      // ── POST /api/transfer ──
       if (method === "POST" && path === "/api/transfer") {
         const { fromTeacher, toTeacher, studentName, subject } = await request.json();
         if (!fromTeacher || !toTeacher || !studentName)
@@ -338,62 +356,62 @@ export default {
         const norm = v => (v == null ? "" : String(v).trim());
         const subj = norm(subject);
 
-        const teachers = (await getKV(env, "teachers")) || [];
-        const fromIdx = teachers.findIndex(t => t.fullName === fromTeacher);
-        const toIdx   = teachers.findIndex(t => t.fullName === toTeacher);
+        const { list, sha } = await readTeachers(env);
+        const fromIdx = list.findIndex(t => t.fullName === fromTeacher);
+        const toIdx   = list.findIndex(t => t.fullName === toTeacher);
         if (fromIdx === -1) return json({ error: "مامۆستای کۆن نەدۆزرایەوە" }, 404);
         if (toIdx   === -1) return json({ error: "مامۆستای نوێ نەدۆزرایەوە" }, 404);
 
-        let entry = (teachers[fromIdx].students || []).find(
+        let entry = (list[fromIdx].students || []).find(
           s => s.fullName === studentName && norm(s.subject) === subj
         );
         if (!entry && subj === "") {
-          entry = (teachers[fromIdx].students || []).find(s => s.fullName === studentName);
+          entry = (list[fromIdx].students || []).find(s => s.fullName === studentName);
         }
         if (!entry) return json({ error: "قوتابی لای ئەم مامۆستایە نەدۆزرایەوە" }, 404);
 
         const entrySubj = norm(entry.subject);
-
-        teachers[fromIdx].students = (teachers[fromIdx].students || []).filter(
+        list[fromIdx].students = (list[fromIdx].students || []).filter(
           s => !(s.fullName === studentName && norm(s.subject) === entrySubj)
         );
 
-        const alreadyAt = (teachers[toIdx].students || []).some(
+        const alreadyAt = (list[toIdx].students || []).some(
           s => s.fullName === studentName && norm(s.subject) === entrySubj
         );
         if (!alreadyAt) {
-          teachers[toIdx].students = [
-            ...(teachers[toIdx].students || []),
+          list[toIdx].students = [
+            ...(list[toIdx].students || []),
             { fullName: studentName, subject: entry.subject || "", acceptedAt: new Date().toISOString() },
           ];
         }
+        await writeTeachers(env, list, sha);
 
-        const students = (await getKV(env, "students")) || [];
-        const sIdx = students.findIndex(s => s.fullName === studentName);
+        // students.json: فیلدی مامۆستا نوێ بکەوە
+        const { list: sList, sha: sSha } = await readStudents(env);
+        const sIdx = sList.findIndex(s => s.fullName === studentName);
         if (sIdx !== -1) {
           const s = norm(entry.subject);
-          if (s === "quran")        students[sIdx].teacherQuran     = toTeacher;
-          else if (s === "tajweed") students[sIdx].teacherTajweed   = toTeacher;
-          else if (s === "edu")     students[sIdx].teacherEducation = toTeacher;
+          if (s === "quran")        sList[sIdx].teacherQuran     = toTeacher;
+          else if (s === "tajweed") sList[sIdx].teacherTajweed   = toTeacher;
+          else if (s === "edu")     sList[sIdx].teacherEducation = toTeacher;
           else {
-            if ((students[sIdx].teacherQuran     || "") === fromTeacher) students[sIdx].teacherQuran     = toTeacher;
-            if ((students[sIdx].teacherEducation || "") === fromTeacher) students[sIdx].teacherEducation = toTeacher;
-            if ((students[sIdx].teacherTajweed   || "") === fromTeacher) students[sIdx].teacherTajweed   = toTeacher;
+            if ((sList[sIdx].teacherQuran     || "") === fromTeacher) sList[sIdx].teacherQuran     = toTeacher;
+            if ((sList[sIdx].teacherEducation || "") === fromTeacher) sList[sIdx].teacherEducation = toTeacher;
+            if ((sList[sIdx].teacherTajweed   || "") === fromTeacher) sList[sIdx].teacherTajweed   = toTeacher;
           }
-          await putKV(env, "students", students);
+          await writeStudents(env, sList, sSha);
         }
 
-        await putKV(env, "teachers", teachers);
         return json({ ok: true });
       }
 
-      // GET /api/blacklist
+      // ── GET /api/blacklist ──
       if (method === "GET" && path === "/api/blacklist") {
         const blacklist = (await getKV(env, "blacklist")) || [];
         return json({ blacklist });
       }
 
-      // POST /api/blacklist
+      // ── POST /api/blacklist ──
       if (method === "POST" && path === "/api/blacklist") {
         const { studentName, reason, addedBy } = await request.json();
         if (!studentName) return json({ error: "ناوی قوتابی پێویستە" }, 400);
@@ -403,16 +421,14 @@ export default {
           return json({ error: "قوتابی پێشتر لە لیستی ڕەشدایە" }, 409);
 
         blacklist.push({
-          studentName,
-          reason: reason || "",
-          addedBy: addedBy || "",
-          addedAt: new Date().toISOString(),
+          studentName, reason: reason || "",
+          addedBy: addedBy || "", addedAt: new Date().toISOString(),
         });
         await putKV(env, "blacklist", blacklist);
         return json({ ok: true });
       }
 
-      // DELETE /api/blacklist
+      // ── DELETE /api/blacklist ──
       if (method === "DELETE" && path === "/api/blacklist") {
         const { studentName } = await request.json();
         if (!studentName) return json({ error: "ناوی قوتابی پێویستە" }, 400);
@@ -427,16 +443,23 @@ export default {
         return json({ ok: true });
       }
 
-      // POST /api/seed
-      if (method === "POST" && path === "/api/seed") {
-        const body = await request.json();
-        const existing = await getKV(env, "students");
-        if (existing && existing.length > 0)
-          return json({ error: "داتا پێشتر هەیە، seed نادرێت" }, 409);
+      // ── GET /api/student-detail ── خوێندنەوەی داتای KV بۆ قوتابی
+      if (method === "GET" && path === "/api/student-detail") {
+        const name = url.searchParams.get("name");
+        if (!name) return json({ error: "ناو پێویستە" }, 400);
 
-        if (body.students) await putKV(env, "students", body.students);
-        if (body.teachers) await putKV(env, "teachers", body.teachers);
-        return json({ ok: true, seeded: true });
+        const allAtt    = (await getKV(env, "attendance"))  || {};
+        const allGrades = (await getKV(env, "grades"))      || {};
+        const allLes    = (await getKV(env, "lastLesson"))  || {};
+        const allNotes  = (await getKV(env, "notes"))        || {};
+
+        return json({
+          attendance:     allAtt[name]    || [],
+          grades:         allGrades[name] || {},
+          lastLesson:     allLes[name]    || null,
+          culturalNotes:  (allNotes[name] || []).filter(n => n.category !== "negative"),
+          behavioralNotes:(allNotes[name] || []).filter(n => n.category === "negative"),
+        });
       }
 
       return json({ error: "نەدۆزرایەوە" }, 404);
