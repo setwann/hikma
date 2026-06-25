@@ -19,5 +19,28 @@
     "birthYear": "",
     "classGroup": "",
     "parentName": ""
+  },
+  {
+    "fullName": "ئه‌له‌ند ئارام",
+    "phone": "07701398205",
+    "age": "24",
+    "fatherJob": "",
+    "financialStatus": "باش",
+    "neighborhood": "",
+    "landmark": "",
+    "illness": "نیەتی",
+    "illnessDetail": "",
+    "educationLevel": "",
+    "studentLevel": "",
+    "memorization": [
+      "ختم"
+    ],
+    "teacherQuran": "اركان دارا رشید",
+    "teacherEducation": "اسماعیل محمود",
+    "teacherTajweed": "اركان دارا رشید",
+    "notes": "",
+    "birthYear": "",
+    "classGroup": "",
+    "parentName": ""
   }
 ]
