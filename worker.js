@@ -470,6 +470,70 @@ export default {
         });
       }
 
+      // ── POST /api/students/batch ── زیادکردنی چەندین قوتابی یەک جار
+      if (method === "POST" && path === "/api/students/batch") {
+        const { list: newStudents } = await request.json();
+        if (!Array.isArray(newStudents) || newStudents.length === 0)
+          return json({ error: "لیست بەتاڵە" }, 400);
+
+        const { list, sha } = await readStudents(env);
+        const existingNames = new Set(list.map(s => s.fullName));
+        const skipped = [];
+        const added = [];
+
+        for (const s of newStudents) {
+          if (!s.fullName || !s.phone) { skipped.push(s.fullName || '?'); continue; }
+          if (existingNames.has(s.fullName)) { skipped.push(s.fullName); continue; }
+          const student = {
+            fullName: s.fullName, phone: s.phone,
+            age: s.age || "", fatherJob: s.fatherJob || "",
+            financialStatus: s.financialStatus || "", neighborhood: s.neighborhood || "",
+            landmark: s.landmark || "", illness: s.illness || "نیەتی",
+            illnessDetail: s.illnessDetail || "", educationLevel: s.educationLevel || "",
+            studentLevel: s.studentLevel || "", memorization: s.memorization || [],
+            teacherQuran: s.teacherQuran || "", teacherEducation: s.teacherEducation || "",
+            teacherTajweed: s.teacherTajweed || "", notes: s.notes || "",
+            birthYear: "", classGroup: "", parentName: "",
+          };
+          list.push(student);
+          existingNames.add(s.fullName);
+          added.push(s.fullName);
+        }
+
+        if (added.length > 0) await writeStudents(env, list, sha);
+        return json({ ok: true, added: added.length, skipped });
+      }
+
+      // ── POST /api/teachers/batch ── زیادکردنی چەندین مامۆستا یەک جار
+      if (method === "POST" && path === "/api/teachers/batch") {
+        const { list: newTeachers } = await request.json();
+        if (!Array.isArray(newTeachers) || newTeachers.length === 0)
+          return json({ error: "لیست بەتاڵە" }, 400);
+
+        const { list, sha } = await readTeachers(env);
+        const existingNames = new Set(list.map(t => t.fullName));
+        const skipped = [];
+        const added = [];
+
+        for (const t of newTeachers) {
+          if (!t.fullName || !t.phone) { skipped.push(t.fullName || '?'); continue; }
+          if (existingNames.has(t.fullName)) { skipped.push(t.fullName); continue; }
+          const teacher = {
+            fullName: t.fullName, phone: t.phone,
+            address: t.address || "", job: t.job || "",
+            ijaza: t.ijaza || "نەخێر", ijazaDetail: t.ijazaDetail || "",
+            subjects: t.subjects || [], assignedClasses: t.assignedClasses || [],
+            students: [],
+          };
+          list.push(teacher);
+          existingNames.add(t.fullName);
+          added.push(t.fullName);
+        }
+
+        if (added.length > 0) await writeTeachers(env, list, sha);
+        return json({ ok: true, added: added.length, skipped });
+      }
+
       return json({ error: "نەدۆزرایەوە" }, 404);
 
     } catch (e) {
