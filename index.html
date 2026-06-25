@@ -1121,13 +1121,9 @@ function renderAllStudents() {
 
     const isMyStudent = _profile && (isAdmin || (_profile.students||[]).some(ms => ms.fullName === s.fullName));
 
-    let actionBtns = '';
-    if (owner) {
-      actionBtns = `<button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>`;
-    } else {
-      actionBtns = `<button class="btn-ok text-xs" onclick="openAcceptModal('${esc(s.fullName)}')">✓ سەح</button>
-                    <button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>`;
-    }
+    const viewBtn = `<button class="btn-ghost text-xs" onclick="showDetail('${esc(s.fullName)}','t-list')">بینین</button>`;
+    const acceptBtn = !owner ? `<button class="btn-ok text-xs" onclick="openAcceptModal('${esc(s.fullName)}')">✓ سەح</button>` : '';
+    const actionBtns = acceptBtn + viewBtn;
     // دوگمەی زیادکردن/دەرهێنان لە لیستی ڕەش — هەر مامۆستایەک
     const blkBtn = blk
       ? `<button class="btn-success text-xs" onclick="openRemoveBlacklist('${esc(s.fullName)}')">✓ دەرهێنان</button>`
