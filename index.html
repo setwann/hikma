@@ -175,7 +175,8 @@
         <button class="nav-tab" onclick="sTab('s-att')" data-tab="s-att">حازربوون</button>
         <button class="nav-tab" onclick="sTab('s-notes')" data-tab="s-notes">تێبینییەکان</button>
       </div>
-      <button class="btn-ghost text-xs" onclick="doLogout()">دەرچوون</button>
+      <button class="btn-ghost text-xs" onclick="hardRefresh()" title="ڕیفریشی بەهێز">🔄</button>
+      <button class="btn-ghost text-xs" onclick="hardRefresh()" title="ڕیفریشی بەهێز">🔄</button> <button class="btn-ghost text-xs" onclick="doLogout()">دەرچوون</button>
     </div>
   </nav>
   <main class="max-w-5xl mx-auto px-4 py-6 space-y-5">
@@ -242,7 +243,8 @@
         <button class="nav-tab hidden" data-tab="t-add-teacher" id="t-add-teacher-tab" onclick="tTab('t-add-teacher')">زیادکردنی مامۆستا</button>
         <button class="nav-tab hidden" data-tab="t-detail" id="t-detail-tab">تەفسیل</button>
       </div>
-      <button class="btn-ghost text-xs" onclick="doLogout()">دەرچوون</button>
+      <button class="btn-ghost text-xs" onclick="hardRefresh()" title="ڕیفریشی بەهێز">🔄</button>
+      <button class="btn-ghost text-xs" onclick="hardRefresh()" title="ڕیفریشی بەهێز">🔄</button> <button class="btn-ghost text-xs" onclick="doLogout()">دەرچوون</button>
     </div>
   </nav>
   <main class="max-w-6xl mx-auto px-4 py-6 space-y-5">
@@ -709,6 +711,16 @@ function doLogout() {
   document.getElementById('lp').value = '';
   document.getElementById('login-err').classList.add('hidden');
   toast('سەرکەوتووانە دەرچوویت.');
+}
+
+// ڕیفریشی بەهێز — کاش پاک دەکاتەوە و دووبارە بار دەکات
+function hardRefresh() {
+  // ئەگەر service worker هەبوو، کاشی پاک بکەوە
+  if ('caches' in window) {
+    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+  }
+  // ڕیفریشی بەهێز بەبێ کاش
+  window.location.reload(true);
 }
 
 function showPage(p) {
