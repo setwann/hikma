@@ -1031,31 +1031,25 @@ async function exportSelectedToDocx() {
   const checked = [...document.querySelectorAll('.bulk-chk:checked')];
   if (!checked.length) { toast('هیچ قوتابیێک هەڵنەبژێردراوە', true); return; }
 
-  // بارکردنی کتێبخانە ئەگەر نەبوو
-  if (typeof docx === 'undefined') {
+  // بارکردنی JSZip
+  if (typeof JSZip === 'undefined') {
     await new Promise((res, rej) => {
       const s = document.createElement('script');
-      s.src = 'https://unpkg.com/docx@8.5.0/build/index.js';
-      s.onload = res; s.onerror = rej;
+      s.src = 'https://raw.githubusercontent.com/Stuk/jszip/master/dist/jszip.min.js';
+      s.onload = res; s.onerror = () => rej(new Error('JSZip بار نەبوو'));
       document.head.appendChild(s);
     });
   }
 
-  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-          AlignmentType, WidthType, BorderStyle, ShadingType, HeadingLevel } = docx;
-
-  // داتای قوتابییەکان کۆبکەرەوە
+  // داتاکۆکردن
   const ownerMap = {};
   DB.teachers.forEach(t => (t.students||[]).forEach(s => { ownerMap[s.fullName] = t.fullName; }));
-
   const subjectMap = { quran: 'قورئان', tajweed: 'تجوید', edu: 'پەروەردە' };
 
-  const selectedStudents = checked.map(c => {
+  const rows = checked.map(c => {
     const name = c.dataset.name;
     const st = DB.students.find(s => s.fullName === name) || {};
     const teacher = ownerMap[name] || '—';
-    const blk = isBlacklisted(name);
-    // بەش لە قوتابی خودی یان لای مامۆستا
     let subject = '—';
     if (teacher !== '—') {
       const t = DB.teachers.find(t => t.fullName === teacher);
@@ -1066,120 +1060,202 @@ async function exportSelectedToDocx() {
     }
     return {
       name,
-      phone: st.phone || '—',
-      address: st.address || '—',
-      level: st.level || '—',
+      phone:     st.phone    || '—',
+      address:   st.address  || '—',
+      level:     st.level    || '—',
       subject,
       teacher,
-      blacklist: blk ? 'بەڵێ ⛔' : 'نەخێر',
-      notes: st.notes || ''
+      blacklist: isBlacklisted(name) ? 'بەڵێ' : 'نەخێر',
     };
   });
 
-  const border = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
-  const borders = { top: border, bottom: border, left: border, right: border };
-
-  // ستونەکان
   const cols = [
-    { label: 'ناو',        key: 'name',      w: 2000 },
-    { label: 'تەلەفۆن',   key: 'phone',     w: 1400 },
-    { label: 'بەش',        key: 'subject',   w: 1200 },
-    { label: 'مامۆستا',   key: 'teacher',   w: 1800 },
-    { label: 'ئاست',      key: 'level',     w: 1000 },
-    { label: 'ناونیشان',  key: 'address',   w: 1600 },
-    { label: 'لیستی ڕەش', key: 'blacklist', w: 1000 },
+    { label: 'ناو',         key: 'name'      },
+    { label: 'تەلەفۆن',    key: 'phone'     },
+    { label: 'بەش',         key: 'subject'   },
+    { label: 'مامۆستا',    key: 'teacher'   },
+    { label: 'ئاست',       key: 'level'     },
+    { label: 'ناونیشان',   key: 'address'   },
+    { label: 'لیستی ڕەش',  key: 'blacklist' },
   ];
-  const totalW = cols.reduce((s, c) => s + c.w, 0); // 10000
 
-  function cell(text, isHeader = false) {
-    return new TableCell({
-      borders,
-      width: { size: 0, type: WidthType.AUTO },
-      shading: isHeader ? { fill: '2E1A47', type: ShadingType.CLEAR } : { fill: 'FFFFFF', type: ShadingType.CLEAR },
-      margins: { top: 80, bottom: 80, left: 120, right: 120 },
-      children: [new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        children: [new TextRun({
-          text: String(text || '—'),
-          font: 'Arial',
-          size: isHeader ? 22 : 20,
-          bold: isHeader,
-          color: isHeader ? 'F5F0E8' : '1A1A2E'
-        })]
-      })]
-    });
+  function esc(t) {
+    return String(t||'—')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // ڕیزی سەر
-  const headerRow = new TableRow({
-    tableHeader: true,
-    children: cols.map(c => cell(c.label, true))
-  });
-
-  // ڕیزەکانی داتا
-  const dataRows = selectedStudents.map((st, i) =>
-    new TableRow({
-      children: cols.map(c => {
-        const tc = cell(st[c.key], false);
-        // ڕەنگی جووت/تاک
-        if (i % 2 === 1) {
-          tc.options = tc.options || {};
-        }
-        return tc;
-      })
-    })
-  );
-
-  const table = new Table({
-    width: { size: 10000, type: WidthType.DXA },
-    columnWidths: cols.map(c => c.w),
-    rows: [headerRow, ...dataRows]
-  });
+  function makeRow(cells, isHeader) {
+    const shd = isHeader
+      ? '<w:shd w:val="clear" w:color="auto" w:fill="2E1A47"/>'
+      : '';
+    const bold = isHeader ? '<w:b/>' : '';
+    const color = isHeader ? '<w:color w:val="F5F0E8"/>' : '';
+    const tcs = cells.map(txt => `
+      <w:tc>
+        <w:tcPr>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+          </w:tcBorders>
+          ${shd}
+          <w:tcMar>
+            <w:top w:w="80" w:type="dxa"/>
+            <w:left w:w="120" w:type="dxa"/>
+            <w:bottom w:w="80" w:type="dxa"/>
+            <w:right w:w="120" w:type="dxa"/>
+          </w:tcMar>
+        </w:tcPr>
+        <w:p>
+          <w:pPr><w:jc w:val="right"/></w:pPr>
+          <w:r>
+            <w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>${bold}${color}<w:sz w:val="${isHeader?22:20}"/><w:szCs w:val="${isHeader?22:20}"/></w:rPr>
+            <w:t xml:space="preserve">${esc(txt)}</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>`).join('');
+    return `<w:tr>${tcs}</w:tr>`;
+  }
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('ar-IQ');
 
-  const doc = new Document({
-    styles: {
-      default: { document: { run: { font: 'Arial', size: 22 } } }
-    },
-    sections: [{
-      properties: {
-        page: {
-          size: { width: 16838, height: 11906 }, // A4 landscape (DXA)
-          margin: { top: 720, right: 720, bottom: 720, left: 720 }
-        }
-      },
-      children: [
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: 'دەزگای ڕووناکبیری نووری حیکمەت — بازنەی سێتوان', font: 'Arial', size: 32, bold: true, color: 'C9A84C' })]
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: 'لیستی قوتابییەکانی هەڵبژێردراو', font: 'Arial', size: 26, bold: true })]
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: 'بەروار: ' + dateStr + '   |   کۆی ژمارە: ' + selectedStudents.length + ' قوتابی', font: 'Arial', size: 20, color: '666666' })]
-        }),
-        new Paragraph({ children: [new TextRun({ text: '' })] }),
-        table,
-      ]
-    }]
-  });
+  const headerRow = makeRow(cols.map(c => c.label), true);
+  const dataRowsXml = rows.map(r => makeRow(cols.map(c => r[c.key]), false)).join('');
 
-  const buffer = await Packer.toBuffer(doc);
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'قوتابییەکان-' + now.toISOString().slice(0,10) + '.docx';
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('فایلی وۆرد داونلۆد کرا ✓');
+  const bodyXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<w:body>
+  <w:p>
+    <w:pPr><w:jc w:val="center"/></w:pPr>
+    <w:r>
+      <w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:color w:val="C9A84C"/><w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr>
+      <w:t>دەزگای ڕووناکبیری نووری حیکمەت — بازنەی سێتوان</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr><w:jc w:val="center"/></w:pPr>
+    <w:r>
+      <w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr>
+      <w:t>لیستی قوتابییەکانی هەڵبژێردراو</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr><w:jc w:val="center"/></w:pPr>
+    <w:r>
+      <w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:color w:val="888888"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>
+      <w:t>بەروار: ${esc(dateStr)}   |   کۆی ژمارە: ${rows.length} قوتابی</w:t>
+    </w:r>
+  </w:p>
+  <w:p><w:r><w:t></w:t></w:r></w:p>
+  <w:tbl>
+    <w:tblPr>
+      <w:tblStyle w:val="TableGrid"/>
+      <w:tblW w:w="15000" w:type="dxa"/>
+      <w:tblBorders>
+        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+      </w:tblBorders>
+    </w:tblPr>
+    <w:tblGrid>
+      <w:gridCol w:w="2800"/>
+      <w:gridCol w:w="1800"/>
+      <w:gridCol w:w="1800"/>
+      <w:gridCol w:w="2500"/>
+      <w:gridCol w:w="1500"/>
+      <w:gridCol w:w="2300"/>
+      <w:gridCol w:w="2300"/>
+    </w:tblGrid>
+    ${headerRow}
+    ${dataRowsXml}
+  </w:tbl>
+  <w:p><w:r><w:t></w:t></w:r></w:p>
+  <w:sectPr>
+    <w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>
+    <w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="0" w:footer="0" w:gutter="0"/>
+  </w:sectPr>
+</w:body>
+</w:document>`;
+
+  const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault>
+      <w:rPr>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+        <w:sz w:val="22"/><w:szCs w:val="22"/>
+      </w:rPr>
+    </w:rPrDefault>
+  </w:docDefaults>
+  <w:style w:type="table" w:styleId="TableGrid">
+    <w:name w:val="Table Grid"/>
+  </w:style>
+</w:styles>`;
+
+  const appXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
+  <Application>Hikma System</Application>
+</Properties>`;
+
+  const coreXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+  xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <dc:title>لیستی قوتابییەکان</dc:title>
+</cp:coreProperties>`;
+
+  const workbookRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>`;
+
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+</Types>`;
+
+  try {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', contentTypes);
+    zip.folder('_rels').file('.rels', workbookRels);
+    const wordFolder = zip.folder('word');
+    wordFolder.file('document.xml', bodyXml);
+    wordFolder.file('styles.xml', stylesXml);
+    wordFolder.folder('_rels').file('document.xml.rels', relsXml);
+    const docProps = zip.folder('docProps');
+    docProps.file('app.xml', appXml);
+    docProps.file('core.xml', coreXml);
+
+    const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'قوتابییەکان-' + now.toISOString().slice(0,10) + '.docx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast('فایلی وۆرد داونلۆد کرا ✓');
+  } catch(e) {
+    toast('هەڵە: ' + e.message, true);
+    console.error(e);
+  }
 }
-
 async function submitBulkAccept() {
   const checked = [...document.querySelectorAll('.bulk-chk:checked')];
   if (!checked.length) return;
