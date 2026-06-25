@@ -42,17 +42,25 @@ async function deleteKV(env, key) {
   await env.HIKMA_KV.delete(key);
 }
 
-// ── GitHub: خوێندنەوەی فایل ──
+// ── GitHub: خوێندنەوەی فایل (raw — بەبێ تۆکین بۆ public ریپۆ) ──
 async function ghRead(env, filename) {
-  const res = await fetch(
-    `https://api.github.com/repos/${GH_REPO}/contents/${filename}?ref=${GH_BRANCH}`,
-    { headers: { Authorization: `Bearer ${env.GH_TOKEN}`, "User-Agent": "hikma-worker" } }
+  // خوێندنەوە لە raw بەبێ تۆکین (ریپۆ public ە)
+  const rawRes = await fetch(
+    `https://raw.githubusercontent.com/${GH_REPO}/${GH_BRANCH}/${filename}`,
+    { headers: { "User-Agent": "hikma-worker" } }
   );
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub GET ${filename} failed: ${res.status}`);
-  const data = await res.json();
-  const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
-  return { data: JSON.parse(decoded), sha: data.sha };
+  if (rawRes.status === 404) return null;
+  if (!rawRes.ok) throw new Error(`GitHub GET ${filename} failed: ${rawRes.status}`);
+  const data = JSON.parse(await rawRes.text());
+  // SHA بۆ نووسینەوە پێویستە — لە API بخوێنەوە (بە تۆکین ئەگەر هەبوو)
+  const apiHeaders = { "User-Agent": "hikma-worker" };
+  if (env.GH_TOKEN) apiHeaders["Authorization"] = `Bearer ${env.GH_TOKEN}`;
+  const apiRes = await fetch(
+    `https://api.github.com/repos/${GH_REPO}/contents/${filename}?ref=${GH_BRANCH}`,
+    { headers: apiHeaders }
+  );
+  const sha = apiRes.ok ? (await apiRes.json()).sha : null;
+  return { data, sha };
 }
 
 // ── GitHub: نووسینەوەی فایل ──
