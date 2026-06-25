@@ -42,5 +42,51 @@
     "birthYear": "",
     "classGroup": "",
     "parentName": ""
+  },
+  {
+    "fullName": "مانی مسعود",
+    "phone": "07712445556",
+    "age": "19",
+    "fatherJob": "",
+    "financialStatus": "باش",
+    "neighborhood": "كانی با",
+    "landmark": "",
+    "illness": "نیەتی",
+    "illnessDetail": "",
+    "educationLevel": "",
+    "studentLevel": "باش",
+    "memorization": [
+      "ختم"
+    ],
+    "teacherQuran": "",
+    "teacherEducation": "",
+    "teacherTajweed": "",
+    "notes": "",
+    "birthYear": "",
+    "classGroup": "",
+    "parentName": ""
+  },
+  {
+    "fullName": "ڕێدین حه‌یده‌ر",
+    "phone": "07701234567",
+    "age": "23",
+    "fatherJob": "",
+    "financialStatus": "باش",
+    "neighborhood": "",
+    "landmark": "",
+    "illness": "نیەتی",
+    "illnessDetail": "",
+    "educationLevel": "",
+    "studentLevel": "",
+    "memorization": [
+      "ختم"
+    ],
+    "teacherQuran": "",
+    "teacherEducation": "",
+    "teacherTajweed": "",
+    "notes": "",
+    "birthYear": "",
+    "classGroup": "",
+    "parentName": ""
   }
 ]
