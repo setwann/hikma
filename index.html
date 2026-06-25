@@ -713,14 +713,14 @@ function doLogout() {
   toast('سەرکەوتووانە دەرچوویت.');
 }
 
-// ڕیفریشی بەهێز — کاش پاک دەکاتەوە و دووبارە بار دەکات
-function hardRefresh() {
-  // ئەگەر service worker هەبوو، کاشی پاک بکەوە
-  if ('caches' in window) {
-    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
-  }
-  // ڕیفریشی بەهێز بەبێ کاش
-  window.location.reload(true);
+// ڕیفریشی بەهێز — داتا دووبارە لە GitHub و KV دەخوێنێتەوە بەبێ لۆگ ئاوت
+async function hardRefresh() {
+  toast('داتا نوێ دەکرێتەوە...');
+  await loadDB();
+  // ڕووکار نوێ بکەوە بەپێی ڕۆڵ
+  if (_role === 'teacher') renderTeacher(_profile);
+  else if (_role === 'student') await renderStudent(_profile);
+  toast('نوێکرایەوە ✓');
 }
 
 function showPage(p) {
