@@ -594,31 +594,31 @@ async function apiCall(endpoint, method='GET', body=null) {
 const DB = { students: [], teachers: [], blacklist: [] };
 
 async function loadDB() {
-  let data = await apiCall('/api/data');
+  // قوتابی و مامۆستا تەنها لە GitHub
+  const data = await apiCall('/api/data');
   DB.teachers = data.teachers || [];
   DB.students  = data.students  || [];
 
-  // ئەگەر KV بەتاڵ بوو، ئەرشیف لە GitHub بخوێنەوە و گەڕاندنەوە بکە
-  if (DB.students.length === 0 && DB.teachers.length === 0) {
-    try {
-      const restoreRes = await apiCall('/api/restore', 'POST');
-      if (restoreRes.ok) {
-        data = await apiCall('/api/data');
-        DB.teachers = data.teachers || [];
-        DB.students  = data.students  || [];
-        toast('داتا لە ئەرشیفەوە گەڕاندرایەوە ✓');
-      }
-    } catch(e) { /* ئەرشیف نەبوو یان هەڵە — بەتاڵ دەمێنێتەوە */ }
-  }
-
+  // blacklist لە KV
   try {
     const blData = await apiCall('/api/blacklist');
     DB.blacklist = blData.blacklist || [];
   } catch(e) { DB.blacklist = []; }
+
   const badge = document.getElementById('blacklist-badge-count');
   if (badge) {
     badge.textContent = DB.blacklist.length;
     badge.classList.toggle('hidden', DB.blacklist.length === 0);
+  }
+}
+
+// خوێندنەوەی داتای KV بۆ قوتابییەکی دیاریکراو
+async function loadStudentDetail(name) {
+  try {
+    const d = await apiCall('/api/student-detail?name=' + encodeURIComponent(name));
+    return d;
+  } catch(e) {
+    return { attendance: [], grades: {}, lastLesson: null, culturalNotes: [], behavioralNotes: [] };
   }
 }
 
@@ -747,7 +747,7 @@ function esc(str) { return String(str || '').replace(/'/g, "\\'"); }
 // ══════════════════════════════════════════════
 //  STUDENT RENDER
 // ══════════════════════════════════════════════
-function renderStudent(p) {
+async function renderStudent(p) {
   showPage('student');
   document.getElementById('s-av').textContent = (p.fullName || 'خ')[0];
   document.getElementById('s-nav-name').textContent = p.fullName || '—';
@@ -758,33 +758,42 @@ function renderStudent(p) {
     ['تەلەفۆن', `<span dir="ltr" class="font-mono">${p.phone||'—'}</span>`],
   ].map(([k,v]) => `<div class="flex justify-between gap-2"><span class="text-muted shrink-0">${k}</span><span class="text-cream text-right">${v}</span></div>`).join('');
 
+  // داتای KV بخوێنەوە
+  const kv = await loadStudentDetail(p.fullName);
+  const grades        = kv.grades        || {};
+  const attendance    = kv.attendance    || [];
+  const culturalNotes = kv.culturalNotes || [];
+  const behavioralNotes = kv.behavioralNotes || [];
+
   const gc = document.getElementById('s-grade-cards'); gc.innerHTML = '';
-  if(p.grades) for(const [subj,g] of Object.entries(p.grades)) {
-    const avg = subjectAvg(g);
-    gc.innerHTML += `<div class="card-inner p-3 text-center"><p class="text-muted text-xs mb-2">${subj}</p><div class="badge ${gradeCls(avg)} mx-auto">${avg??'—'}</div></div>`;
+  if(Object.keys(grades).length) {
+    for(const [subj,g] of Object.entries(grades)) {
+      const avg = subjectAvg(g);
+      gc.innerHTML += `<div class="card-inner p-3 text-center"><p class="text-muted text-xs mb-2">${subj}</p><div class="badge ${gradeCls(avg)} mx-auto">${avg??'—'}</div></div>`;
+    }
   }
 
-  const ac = attCounts(p.attendance);
+  const ac = attCounts(attendance);
   document.getElementById('s-att-summary').innerHTML = [
     ['att-p','حازر',ac.present],['att-a','غایب',ac.absent],['att-l','دواکەوتوو',ac.late]
   ].map(([cls,lbl,n]) => `<span class="flex items-center gap-1.5"><span class="att ${cls}"></span><span class="text-muted">${lbl}:</span><span class="text-cream font-semibold">${n}</span></span>`).join('');
 
   const gb = document.getElementById('s-grade-rows');
-  gb.innerHTML = p.grades && Object.keys(p.grades).length
-    ? Object.entries(p.grades).map(([subj,g]) => {
+  gb.innerHTML = Object.keys(grades).length
+    ? Object.entries(grades).map(([subj,g]) => {
         const a = subjectAvg(g);
         return `<tr><td class="text-cream font-medium">${subj}</td><td>${gradeLabel(g.q1)}</td><td>${gradeLabel(g.q2)}</td><td>${gradeLabel(g.final)}</td><td><span class="badge ${gradeCls(a)}">${gradeLabel(a)}</span></td></tr>`;
       }).join('')
     : '<tr><td colspan="5" class="text-center text-muted py-4">نمرەی نییە</td></tr>';
 
   const ab = document.getElementById('s-att-rows');
-  ab.innerHTML = p.attendance && p.attendance.length
-    ? [...p.attendance].reverse().map(a =>
+  ab.innerHTML = attendance.length
+    ? [...attendance].reverse().map(a =>
         `<tr><td class="font-mono text-xs" dir="ltr">${a.date}</td><td><span class="flex items-center gap-1.5"><span class="att ${attDotCls(a.status)}"></span>${attLabel(a.status)}</span></td><td class="text-muted text-xs">${a.reason||'—'}</td></tr>`
       ).join('')
     : '<tr><td colspan="3" class="text-center text-muted py-4">تۆماری نییە</td></tr>';
 
-  const all = [...(p.culturalNotes||[]), ...(p.behavioralNotes||[])].sort((a,b) => b.date.localeCompare(a.date));
+  const all = [...culturalNotes, ...behavioralNotes].sort((a,b) => b.date.localeCompare(a.date));
   document.getElementById('s-note-list').innerHTML = all.length
     ? all.map(n => `<div class="note ${noteClass(n.category)}"><div class="flex items-center justify-between gap-2 mb-1"><span class="text-xs text-muted font-mono" dir="ltr">${n.date}</span><span class="text-xs text-muted">${n.author||''}</span></div><p>${n.note}</p></div>`).join('')
     : '<p class="text-muted text-sm text-center py-4">تێبینیی نییە.</p>';
@@ -1145,7 +1154,7 @@ async function confirmDeleteStudent(name) {
 // ══════════════════════════════════════════════
 //  تەفسیل
 // ══════════════════════════════════════════════
-function showDetail(name, backTab) {
+async function showDetail(name, backTab) {
   const p = findStudent(name);
   if(!p) { toast('قوتابی نەدۆزرایەوە', true); return; }
 
@@ -1156,14 +1165,22 @@ function showDetail(name, backTab) {
   }
   document.getElementById('t-detail-tab').classList.remove('hidden');
   document.querySelector('[data-tab="t-detail"]').onclick = () => tTab(backTab);
-  document.getElementById('t-detail-content').innerHTML = buildDetailHTML(p);
+  // داتای KV بخوێنەوە
+  const kv = await loadStudentDetail(name);
+  document.getElementById('t-detail-content').innerHTML = buildDetailHTML(p, kv);
   tTab('t-detail');
 }
 
-function buildDetailHTML(p) {
-  const avg = overallAvg(p.grades);
-  const ac  = attCounts(p.attendance||[]);
-  const all = [...(p.culturalNotes||[]), ...(p.behavioralNotes||[])].sort((a,b) => b.date.localeCompare(a.date));
+function buildDetailHTML(p, kv) {
+  const grades          = (kv && kv.grades)          || {};
+  const attendance      = (kv && kv.attendance)      || [];
+  const culturalNotes   = (kv && kv.culturalNotes)   || [];
+  const behavioralNotes = (kv && kv.behavioralNotes) || [];
+  const lastLesson      = (kv && kv.lastLesson)      || null;
+
+  const avg = overallAvg(grades);
+  const ac  = attCounts(attendance);
+  const all = [...culturalNotes, ...behavioralNotes].sort((a,b) => b.date.localeCompare(a.date));
 
   function row(label, val) {
     return `<div class="flex justify-between gap-2 py-1 border-b border-white/5">
@@ -1180,15 +1197,15 @@ function buildDetailHTML(p) {
     ? p.memorization.join('، ')
     : '—';
 
-  const gradeRows = p.grades && Object.keys(p.grades).length
-    ? Object.entries(p.grades).map(([subj,g]) => {
+  const gradeRows = Object.keys(grades).length
+    ? Object.entries(grades).map(([subj,g]) => {
         const a = subjectAvg(g);
         return `<tr><td class="text-cream font-medium">${subj}</td><td>${gradeLabel(g.q1)}</td><td>${gradeLabel(g.q2)}</td><td>${gradeLabel(g.final)}</td><td><span class="badge ${gradeCls(a)}">${gradeLabel(a)}</span></td></tr>`;
       }).join('')
     : '<tr><td colspan="5" class="text-center text-muted py-3">نمرەی نییە</td></tr>';
 
-  const attRows = p.attendance && p.attendance.length
-    ? [...p.attendance].reverse().map(a =>
+  const attRows = attendance.length
+    ? [...attendance].reverse().map(a =>
         `<tr><td class="font-mono text-xs" dir="ltr">${a.date}</td><td><span class="flex items-center gap-1.5"><span class="att ${attDotCls(a.status)}"></span>${attLabel(a.status)}</span></td><td class="text-muted text-xs">${a.reason||'—'}</td></tr>`
       ).join('')
     : '<tr><td colspan="3" class="text-center text-muted py-3">تۆماری نییە</td></tr>';
@@ -1224,7 +1241,7 @@ function buildDetailHTML(p) {
           ${row('مامۆستای تجوید', p.teacherTajweed)}
         </div>
         ${p.notes ? `<div class="mt-3 p-3 rounded bg-white/5 text-xs text-cream"><span class="text-muted block mb-1">تێبینی</span>${p.notes}</div>` : ''}
-        ${p.lastLesson ? `<div class="mt-3 p-3 rounded bg-white/5 text-xs space-y-1"><span class="text-muted block mb-1.5 font-semibold">دوایین درس</span>${p.lastLesson.quran?`<div><span class="text-muted">قورئان: </span>${p.lastLesson.quran}</div>`:''}${p.lastLesson.tajweed?`<div><span class="text-muted">تجوید: </span>${p.lastLesson.tajweed}</div>`:''}${p.lastLesson.edu?`<div><span class="text-muted">پەروەردە: </span>${p.lastLesson.edu}</div>`:''}</div>` : ''}
+        ${lastLesson ? `<div class="mt-3 p-3 rounded bg-white/5 text-xs space-y-1"><span class="text-muted block mb-1.5 font-semibold">دوایین درس</span>${lastLesson.quran?`<div><span class="text-muted">قورئان: </span>${lastLesson.quran}</div>`:''}${lastLesson.tajweed?`<div><span class="text-muted">تجوید: </span>${lastLesson.tajweed}</div>`:''}${lastLesson.edu?`<div><span class="text-muted">پەروەردە: </span>${lastLesson.edu}</div>`:''}</div>` : ''}
       </div>
 
     </div>
@@ -1509,9 +1526,12 @@ async function submitEditStudent() {
     await apiCall('/api/student', 'PUT', updated);
     await loadDB();
     closeModal('modal-edit');
-    // نوێکردنەوەی detail view
+    // نوێکردنەوەی detail view — داتای KV دووبارە بخوێنەوە
     const p2 = findStudent(name);
-    if (p2) document.getElementById('t-detail-content').innerHTML = buildDetailHTML(p2);
+    if (p2) {
+      const kv2 = await loadStudentDetail(name);
+      document.getElementById('t-detail-content').innerHTML = buildDetailHTML(p2, kv2);
+    }
     toast(`${name} نوێکرایەوە ✓`);
   } catch(e) {
     errEl.textContent = 'هەڵە: ' + e.message;
