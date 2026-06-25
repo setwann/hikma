@@ -303,6 +303,7 @@
           </select>
           <button class="btn-ok text-sm" onclick="submitBulkAccept()">✓ پاشەکەوتی کۆی</button>
           <button class="btn-ghost text-xs" onclick="clearBulkSelection()">پاككردنەوە</button>
+          <button class="btn-ghost text-xs" style="margin-right:auto;border-color:rgba(201,168,76,.4);color:#C9A84C" onclick="exportSelectedToDocx()">📥 داونلۆدی وۆرد</button>
         </div>
         <div class="sx">
           <table class="tbl">
@@ -1021,6 +1022,162 @@ function clearBulkSelection() {
   document.querySelectorAll('.bulk-chk').forEach(c => c.checked = false);
   document.getElementById('bulk-check-all').checked = false;
   onBulkCheckChange();
+}
+
+// ══════════════════════════════════════════════
+//  داونلۆدی وۆرد بۆ هەڵبژێردراوەکان
+// ══════════════════════════════════════════════
+async function exportSelectedToDocx() {
+  const checked = [...document.querySelectorAll('.bulk-chk:checked')];
+  if (!checked.length) { toast('هیچ قوتابیێک هەڵنەبژێردراوە', true); return; }
+
+  // بارکردنی کتێبخانە ئەگەر نەبوو
+  if (typeof docx === 'undefined') {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/docx@8.5.0/build/index.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          AlignmentType, WidthType, BorderStyle, ShadingType, HeadingLevel } = docx;
+
+  // داتای قوتابییەکان کۆبکەرەوە
+  const ownerMap = {};
+  DB.teachers.forEach(t => (t.students||[]).forEach(s => { ownerMap[s.fullName] = t.fullName; }));
+
+  const subjectMap = { quran: 'قورئان', tajweed: 'تجوید', edu: 'پەروەردە' };
+
+  const selectedStudents = checked.map(c => {
+    const name = c.dataset.name;
+    const st = DB.students.find(s => s.fullName === name) || {};
+    const teacher = ownerMap[name] || '—';
+    const blk = isBlacklisted(name);
+    // بەش لە قوتابی خودی یان لای مامۆستا
+    let subject = '—';
+    if (teacher !== '—') {
+      const t = DB.teachers.find(t => t.fullName === teacher);
+      if (t) {
+        const rel = (t.students||[]).find(s => s.fullName === name);
+        if (rel && rel.subject) subject = subjectMap[rel.subject] || rel.subject;
+      }
+    }
+    return {
+      name,
+      phone: st.phone || '—',
+      address: st.address || '—',
+      level: st.level || '—',
+      subject,
+      teacher,
+      blacklist: blk ? 'بەڵێ ⛔' : 'نەخێر',
+      notes: st.notes || ''
+    };
+  });
+
+  const border = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
+  const borders = { top: border, bottom: border, left: border, right: border };
+
+  // ستونەکان
+  const cols = [
+    { label: 'ناو',        key: 'name',      w: 2000 },
+    { label: 'تەلەفۆن',   key: 'phone',     w: 1400 },
+    { label: 'بەش',        key: 'subject',   w: 1200 },
+    { label: 'مامۆستا',   key: 'teacher',   w: 1800 },
+    { label: 'ئاست',      key: 'level',     w: 1000 },
+    { label: 'ناونیشان',  key: 'address',   w: 1600 },
+    { label: 'لیستی ڕەش', key: 'blacklist', w: 1000 },
+  ];
+  const totalW = cols.reduce((s, c) => s + c.w, 0); // 10000
+
+  function cell(text, isHeader = false) {
+    return new TableCell({
+      borders,
+      width: { size: 0, type: WidthType.AUTO },
+      shading: isHeader ? { fill: '2E1A47', type: ShadingType.CLEAR } : { fill: 'FFFFFF', type: ShadingType.CLEAR },
+      margins: { top: 80, bottom: 80, left: 120, right: 120 },
+      children: [new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        children: [new TextRun({
+          text: String(text || '—'),
+          font: 'Arial',
+          size: isHeader ? 22 : 20,
+          bold: isHeader,
+          color: isHeader ? 'F5F0E8' : '1A1A2E'
+        })]
+      })]
+    });
+  }
+
+  // ڕیزی سەر
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: cols.map(c => cell(c.label, true))
+  });
+
+  // ڕیزەکانی داتا
+  const dataRows = selectedStudents.map((st, i) =>
+    new TableRow({
+      children: cols.map(c => {
+        const tc = cell(st[c.key], false);
+        // ڕەنگی جووت/تاک
+        if (i % 2 === 1) {
+          tc.options = tc.options || {};
+        }
+        return tc;
+      })
+    })
+  );
+
+  const table = new Table({
+    width: { size: 10000, type: WidthType.DXA },
+    columnWidths: cols.map(c => c.w),
+    rows: [headerRow, ...dataRows]
+  });
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ar-IQ');
+
+  const doc = new Document({
+    styles: {
+      default: { document: { run: { font: 'Arial', size: 22 } } }
+    },
+    sections: [{
+      properties: {
+        page: {
+          size: { width: 16838, height: 11906 }, // A4 landscape (DXA)
+          margin: { top: 720, right: 720, bottom: 720, left: 720 }
+        }
+      },
+      children: [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: 'دەزگای ڕووناکبیری نووری حیکمەت — بازنەی سێتوان', font: 'Arial', size: 32, bold: true, color: 'C9A84C' })]
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: 'لیستی قوتابییەکانی هەڵبژێردراو', font: 'Arial', size: 26, bold: true })]
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: 'بەروار: ' + dateStr + '   |   کۆی ژمارە: ' + selectedStudents.length + ' قوتابی', font: 'Arial', size: 20, color: '666666' })]
+        }),
+        new Paragraph({ children: [new TextRun({ text: '' })] }),
+        table,
+      ]
+    }]
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'قوتابییەکان-' + now.toISOString().slice(0,10) + '.docx';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('فایلی وۆرد داونلۆد کرا ✓');
 }
 
 async function submitBulkAccept() {
