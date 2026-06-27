@@ -157,5 +157,51 @@
     "birthYear": "",
     "classGroup": "",
     "parentName": ""
+  },
+  {
+    "fullName": "محمد سەروەر",
+    "phone": "07725115384",
+    "age": "14",
+    "fatherJob": "مامۆستا",
+    "financialStatus": "باش",
+    "neighborhood": "کانی با",
+    "landmark": "مزگەوتی بەرکێو",
+    "illness": "نیەتی",
+    "illnessDetail": "",
+    "educationLevel": "بنەڕەتی ٩",
+    "studentLevel": "باش",
+    "memorization": [
+      "ختم"
+    ],
+    "teacherQuran": "اركان دارا رشید",
+    "teacherEducation": "",
+    "teacherTajweed": "زمناكۆ رۆسته‌م",
+    "notes": "",
+    "birthYear": "",
+    "classGroup": "",
+    "parentName": ""
+  },
+  {
+    "fullName": "لیڤار هەرێم",
+    "phone": "07703598148",
+    "age": "17",
+    "fatherJob": "ئاگرکوژێنەوە لە فڕۆکەخانه",
+    "financialStatus": "باش",
+    "neighborhood": "حاجی ئاوا",
+    "landmark": "بنکەی پۆلیسی سەیوان",
+    "illness": "نیەتی",
+    "illnessDetail": "",
+    "educationLevel": "دواناوەندی ١١",
+    "studentLevel": "باش",
+    "memorization": [
+      "جوزئی تبارک"
+    ],
+    "teacherQuran": "اركان دارا رشید",
+    "teacherEducation": "اسماعیل محمود",
+    "teacherTajweed": "سه‌ركۆ عه‌لی",
+    "notes": "",
+    "birthYear": "",
+    "classGroup": "",
+    "parentName": ""
   }
 ]
