@@ -1,23 +1,8 @@
 {
-  "archivedAt": "2026-06-27T22:00:02.784Z",
-  "attendance": {
-    "رامان اركان دارا": [
-      {
-        "date": "2026-06-27",
-        "day": "شەممە",
-        "status": "present"
-      }
-    ]
-  },
+  "archivedAt": "2026-06-27T22:00:53.670Z",
+  "attendance": {},
   "grades": {},
   "blacklist": [],
-  "lastLesson": {
-    "رامان اركان دارا": {
-      "quran": "البقره‌ 123-136",
-      "tajweed": "",
-      "edu": "",
-      "savedAt": "2026-06-25T08:15:28.097Z"
-    }
-  },
+  "lastLesson": {},
   "notes": {}
 }
