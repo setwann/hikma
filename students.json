@@ -88,5 +88,74 @@
     "birthYear": "",
     "classGroup": "",
     "parentName": ""
+  },
+  {
+    "fullName": "ئەرین ئارام",
+    "phone": "07501103031",
+    "age": "15",
+    "fatherJob": "ئەندازیار",
+    "financialStatus": "باش",
+    "neighborhood": "سێتوان",
+    "landmark": "حیکمه",
+    "illness": "نیەتی",
+    "illnessDetail": "",
+    "educationLevel": "بنەڕەتی ٩",
+    "studentLevel": "باش",
+    "memorization": [
+      "ختم"
+    ],
+    "teacherQuran": "اركان دارا رشید",
+    "teacherEducation": "",
+    "teacherTajweed": "",
+    "notes": "",
+    "birthYear": "",
+    "classGroup": "",
+    "parentName": ""
+  },
+  {
+    "fullName": "محمد سەنگەر",
+    "phone": "07711363112",
+    "age": "14",
+    "fatherJob": "کاسب",
+    "financialStatus": "باش",
+    "neighborhood": "قەرەتۆغان",
+    "landmark": "مزگەوتی قەرەتۆغان",
+    "illness": "نیەتی",
+    "illnessDetail": "",
+    "educationLevel": "بنەڕەتی ٩",
+    "studentLevel": "مامناوەند",
+    "memorization": [
+      "جوزئی عم"
+    ],
+    "teacherQuran": "اركان دارا رشید",
+    "teacherEducation": "زمناكۆ رۆسته‌م",
+    "teacherTajweed": "زمناكۆ رۆسته‌م",
+    "notes": "",
+    "birthYear": "",
+    "classGroup": "",
+    "parentName": ""
+  },
+  {
+    "fullName": "ڕێژوان ڕێباز",
+    "phone": "07713280494",
+    "age": "16",
+    "fatherJob": "کاسب",
+    "financialStatus": "باش",
+    "neighborhood": "ڕۆژهەڵات",
+    "landmark": "نەخۆشخانەی بەخشین",
+    "illness": "نیەتی",
+    "illnessDetail": "",
+    "educationLevel": "دواناوەندی ١١",
+    "studentLevel": "مامناوەند",
+    "memorization": [
+      "جوزئی تبارک"
+    ],
+    "teacherQuran": "اركان دارا رشید",
+    "teacherEducation": "زمناكۆ رۆسته‌م",
+    "teacherTajweed": "زمناكۆ رۆسته‌م",
+    "notes": "",
+    "birthYear": "",
+    "classGroup": "",
+    "parentName": ""
   }
 ]
