@@ -63,8 +63,8 @@ async function ghRead(env, filename) {
   return { data, sha };
 }
 
-// ── GitHub: نووسینەوەی فایل ──
-async function ghWrite(env, filename, content, sha) {
+// ── GitHub: نووسینەوەی فایل (بە retry بۆ SHA conflict) ──
+async function ghWrite(env, filename, content, sha, _retry = false) {
   const body = {
     message: `update: ${filename} ${new Date().toISOString()}`,
     content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
@@ -84,6 +84,21 @@ async function ghWrite(env, filename, content, sha) {
       body: JSON.stringify(body),
     }
   );
+
+  // SHA conflict — SHA نوێ بخوێنەوە و دووبارە هەوڵ بدەوە
+  if (res.status === 409 && !_retry) {
+    const apiHeaders = { "User-Agent": "hikma-worker" };
+    if (env.GH_TOKEN) apiHeaders["Authorization"] = `Bearer ${env.GH_TOKEN}`;
+    const apiRes = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/contents/${filename}?ref=${GH_BRANCH}`,
+      { headers: apiHeaders }
+    );
+    if (apiRes.ok) {
+      const freshSha = (await apiRes.json()).sha;
+      return ghWrite(env, filename, content, freshSha, true);
+    }
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(`GitHub PUT ${filename} failed: ${res.status} — ${err.message || ""}`);
