@@ -1827,6 +1827,7 @@ function tTab(id) {
   if (id === 't-list') renderAllStudents();
   if (id === 't-mylist') renderMyStudents();
   if (id === 't-blacklist') renderBlacklist();
+  if (id === 't-teachers') { loadDB().then(() => renderTeachersList()); }
 }
 
 document.addEventListener('keydown', e => {
